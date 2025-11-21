@@ -27,7 +27,7 @@ Make sure you have these components installed in your Termux environment:
 
 ```sh
 pkg install clang make x11-repo
-pkg install termux-x11 pulseaudio xproto ffmpeg
+pkg install termux-x11 pulseaudio xproto libmpg123
 ```
 
 1. **X Server:**  
