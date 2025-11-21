@@ -1,7 +1,3 @@
- **TermuxMusic95** project — WinAMP 2.x clone for Termux, written entirely in C++. This version emphasizes clarity, user guidance, and modern open-source standards.
-
-***
-
 # TermuxMusic95
 
 *An X11-based MP3 player for Termux, inspired by WinAMP 2.x and written entirely in C++.*
@@ -118,3 +114,5 @@ This project is licensed under the [MIT License](LICENSE).
 
 - **Bugs and feature requests:** Please open issues and PRs on GitHub.
 - **Contact:** See repository issues or discussions for support
+
+*"it may better when it comes to retro"*
