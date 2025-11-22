@@ -5,9 +5,18 @@
 #include <vector>
 #include <string>
 
-// --- VISUAL CONSTANTS ---
-const int W_WIDTH = 275;
-const int W_HEIGHT = 116;
+// --- UI SCALING FACTOR ---
+// Change this to 3 or 4 if you want it even bigger!
+const int UI_SCALE = 1;
+
+// --- VISUAL CONSTANTS (Logical Dimensions) ---
+const int LOGICAL_WIDTH = 275;
+const int LOGICAL_HEIGHT = 116;
+
+// Actual Window Dimensions
+const int W_WIDTH = LOGICAL_WIDTH * UI_SCALE;
+const int W_HEIGHT = LOGICAL_HEIGHT * UI_SCALE;
+
 // Colors
 const unsigned long C_BG = 0x191919;
 const unsigned long C_FACE = 0x282828;
@@ -33,7 +42,7 @@ struct AppState {
 
     // Playback State
     std::atomic<bool> shuffle{false};
-    std::atomic<int> repeatMode{REP_OFF}; // Changed from bool to int (0=Off, 1=One, 2=All)
+    std::atomic<int> repeatMode{REP_OFF}; 
 
     // Audio Data
     std::vector<std::string> playlist;
