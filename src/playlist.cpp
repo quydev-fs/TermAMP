@@ -7,8 +7,9 @@
 #include <ctime>
 #include <iostream>
 #include <iomanip>
+#include <numeric> // for std::iota
+#include <random>  // for std::default_random_engine
 #include <sstream>
-
 void loadPlaylist(AppState& app, int argc, char** argv) {
     if (argc < 2) return;
 
@@ -44,12 +45,40 @@ void loadPlaylist(AppState& app, int argc, char** argv) {
         }
     }
     std::sort(app.playlist.begin(), app.playlist.end());
+    
+    // Initialize Play Order (0, 1, 2, 3...)
+    app.play_order.resize(app.playlist.size());
+    std::iota(app.play_order.begin(), app.play_order.end(), 0);
+}
+
+void toggleShuffle(AppState& app) {
+    if (app.playlist.empty()) return;
+
+    // 1. Identify current actual song
+    size_t current_real_index = app.play_order[app.track_idx];
+
+    if (app.shuffle) {
+        // Turning ON: Shuffle the vector
+        unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+        std::shuffle(app.play_order.begin(), app.play_order.end(), std::default_random_engine(seed));
+    } else {
+        // Turning OFF: Restore 0, 1, 2...
+        std::iota(app.play_order.begin(), app.play_order.end(), 0);
+    }
+
+    // 2. Find where the current song moved to, and update track_idx
+    // This prevents the song from skipping abruptly
+    for(size_t i=0; i<app.play_order.size(); i++) {
+        if(app.play_order[i] == current_real_index) {
+            app.track_idx = i;
+            break;
+        }
+    }
 }
 
 bool savePlaylist(const AppState& app, std::string filename) {
     if (app.playlist.empty()) return false;
 
-    // Generate filename if empty: playlist_YYYY-MM-DD_HHMMSS.m3u
     if (filename.empty()) {
         auto t = std::time(nullptr);
         auto tm = *std::localtime(&t);
@@ -65,10 +94,8 @@ bool savePlaylist(const AppState& app, std::string filename) {
     }
 
     file << "#EXTM3U" << std::endl;
-    
+    // Note: We save the list in Alphabetical (Original) order, not shuffled order.
     for (const auto& track : app.playlist) {
-        // Note: To get specific metadata (Duration/Title) here efficiently without 
-        // re-parsing every file, we stick to basic M3U (paths only) which is standard.
         file << track << std::endl;
     }
 

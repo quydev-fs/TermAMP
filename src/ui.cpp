@@ -1,5 +1,5 @@
 #include "ui.h"
-#include "playlist.h" // Include playlist to access save function
+#include "playlist.h" 
 #include <X11/keysym.h>
 #include <unistd.h>
 #include <algorithm>
@@ -133,11 +133,9 @@ void UI::render() {
     drawButton(85, by, 20, 18, "[]", false);
     drawButton(108, by, 20, 18, ">|", false);
 
-    // Draw Shuffle, Repeat, and NEW Save button
-    drawButton(200, 90, 20, 12, "SH", false);
-    drawButton(225, 90, 20, 12, "RP", false);
-    
-    // New SV (Save) Button
+    // --- FIX: Update Buttons with State (app->shuffle/repeat) ---
+    drawButton(200, 90, 20, 12, "SH", app->shuffle);
+    drawButton(225, 90, 20, 12, "RP", app->repeat);
     drawButton(250, 90, 20, 12, "SV", false); 
 }
 
@@ -150,13 +148,20 @@ void UI::handleInput(int x, int y) {
         else if (x>=108 && x<128) { if(app->track_idx < app->playlist.size()-1) app->track_idx++; app->playing=true; }
     }
     
-    // Option Buttons (Shuffle, Repeat, Save)
+    // Option Buttons
     if (y >= 90 && y <= 102) {
-        // x=200 SH, x=225 RP
-        if (x >= 250 && x <= 270) {
-            // Save Button Clicked
+        // SH (Shuffle)
+        if (x >= 200 && x <= 220) {
+            app->shuffle = !app->shuffle;
+            toggleShuffle(*app); // Recalculate play order
+        }
+        // RP (Repeat)
+        else if (x >= 225 && x <= 245) {
+            app->repeat = !app->repeat;
+        }
+        // SV (Save)
+        else if (x >= 250 && x <= 270) {
             savePlaylist(*app);
-            // Visual flash or title update could go here
         }
     }
 
@@ -177,11 +182,8 @@ void UI::handleKey(KeySym ks) {
     if (ks == XK_v) { app->playing = false; }
     if (ks == XK_z) { if(app->track_idx > 0) app->track_idx--; app->playing=true; }
     if (ks == XK_b) { if(app->track_idx < app->playlist.size()-1) app->track_idx++; app->playing=true; }
-    
-    // Hotkey for Save
-    if (ks == XK_s) { 
-        savePlaylist(*app); 
-    }
+    if (ks == XK_s) { savePlaylist(*app); }
+    if (ks == XK_r) { app->repeat = !app->repeat; } // Added 'R' hotkey
 }
 
 void UI::runLoop() {

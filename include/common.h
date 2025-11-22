@@ -24,9 +24,15 @@ struct AppState {
     std::atomic<bool> paused{false};
     std::atomic<int> volume{90}; 
 
+    // Playback State
+    std::atomic<bool> shuffle{false};
+    std::atomic<bool> repeat{false};
+
     // Audio Data
     std::vector<std::string> playlist;
-    std::atomic<size_t> track_idx{0};
+    std::vector<size_t> play_order; // The mapping vector (0,1,2 or Randomized)
+    
+    std::atomic<size_t> track_idx{0}; // Index into play_order
     std::atomic<long> current_frame{0};
     std::atomic<long> total_frames{0};
     std::atomic<int> sample_rate{44100};

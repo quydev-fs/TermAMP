@@ -20,19 +20,19 @@ all: directories $(TARGET)
 
 $(TARGET): $(OBJS)
 	@echo "Linking..."
-	$(CXX) $(OBJS) -o $@ $(LDFLAGS)
+	@$(CXX) $(OBJS) -o $@ $(LDFLAGS)
 	@echo "Build Complete: $@"
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 	@echo "Compiling $<..."
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+	@$(CXX) $(CXXFLAGS) -c $< -o $@
 
 directories:
 	@mkdir -p $(OBJ_DIR)
 	@mkdir -p $(BIN_DIR)
 
 clean:
-	rm -rf build
+	@rm -rf build
 	@echo "Cleaned build artifacts."
 
 .PHONY: all clean directories

@@ -43,7 +43,11 @@ void Player::audioLoop() {
             continue;
         }
 
-        if (mpg123_open(mh, app->playlist[app->track_idx].c_str()) != MPG123_OK) {
+        // --- FIX: Use Play Order Mapping ---
+        size_t actual_file_index = app->play_order[app->track_idx];
+        std::string current_file = app->playlist[actual_file_index];
+
+        if (mpg123_open(mh, current_file.c_str()) != MPG123_OK) {
             app->playing = false;
             continue;
         }
@@ -63,9 +67,9 @@ void Player::audioLoop() {
         if (mpg123_id3(mh, &v1, &v2) == MPG123_OK) {
             if (v2 && v2->title) app->current_title = v2->title->p;
             else if (v1) app->current_title = v1->title;
-            else app->current_title = app->playlist[app->track_idx];
+            else app->current_title = current_file;
         } else {
-            app->current_title = app->playlist[app->track_idx];
+            app->current_title = current_file;
         }
 
         while (app->playing && app->running) {
@@ -78,11 +82,22 @@ void Player::audioLoop() {
             if (app->paused) { usleep(50000); continue; }
 
             int ret = mpg123_read(mh, buffer, buff_size, &done);
+            
+            // --- FIX: End of Song Logic (Repeat/Next) ---
             if (ret == MPG123_DONE) {
                 size_t next = app->track_idx + 1;
-                if (next >= app->playlist.size()) next = 0;
+                if (next >= app->playlist.size()) {
+                    // End of playlist reached
+                    if (app->repeat) {
+                        next = 0; // Loop back
+                    } else {
+                        app->playing = false; // Stop
+                        app->track_idx = 0;   // Reset for next time
+                        break;
+                    }
+                }
                 app->track_idx = next;
-                break; 
+                break; // Break inner loop to load new file
             }
 
             mpg123_frameinfo fi;
