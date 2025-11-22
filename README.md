@@ -1,5 +1,9 @@
 # TermuxMusic95
 
+<p align="center">
+  <img src="assets/logo.jpg" />
+</p>
+
 *An X11-based MP3 player for Termux, inspired by WinAMP 2.x and written entirely in C++.*
 
 ***
