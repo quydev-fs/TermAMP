@@ -58,6 +58,7 @@ void loadPlaylist(AppState& app, int argc, char** argv) {
 void toggleShuffle(AppState& app) {
     if (app.playlist.empty()) return;
 
+    // Fail-safe
     if (app.play_order.size() != app.playlist.size()) {
         app.play_order.resize(app.playlist.size());
         std::iota(app.play_order.begin(), app.play_order.end(), 0);
@@ -106,4 +107,70 @@ bool savePlaylist(const AppState& app, std::string filename) {
     }
     file.close();
     return true;
+}
+
+// --- NAVIGATION LOGIC ---
+
+void playNext(AppState& app, bool forceChange) {
+    if (app.playlist.empty()) return;
+
+    // Manual click usually forces change even in Repeat One
+    // Auto-advance checks repeat mode in player.cpp
+    
+    size_t next = app.track_idx + 1;
+
+    if (next >= app.playlist.size()) {
+        // End of list
+        if (app.repeatMode == REP_ALL || (app.repeatMode == REP_ONE && forceChange)) {
+            next = 0; // Loop back
+        } else {
+            // Stop playback
+            app.playing = false;
+            app.track_idx = 0; 
+            app.seek_pos = 0.0;
+            return;
+        }
+    }
+    
+    app.track_idx = next;
+    app.playing = true;
+    app.paused = false;
+    app.seek_pos = 0.0;
+    app.seek_request = false;
+}
+
+void playPrevious(AppState& app) {
+    if (app.playlist.empty()) return;
+
+    // 1. SMART PREVIOUS: Check position
+    double current_seconds = 0.0;
+    if (app.sample_rate > 0) {
+        current_seconds = (double)app.current_frame / (double)app.sample_rate;
+    }
+
+    // If played > 3 seconds, restart track
+    if (current_seconds > 3.0) {
+        app.seek_pos = 0.0;
+        app.seek_request = true;
+        app.playing = true;
+        app.paused = false;
+        return;
+    }
+
+    // 2. Go to Previous File
+    if (app.track_idx > 0) {
+        app.track_idx--;
+    } else {
+        // At start of list
+        if (app.repeatMode == REP_ALL || app.repeatMode == REP_ONE) {
+            app.track_idx = app.playlist.size() - 1; // Wrap to end
+        } else {
+            app.track_idx = 0; // Stay at start
+        }
+    }
+    
+    app.playing = true;
+    app.paused = false;
+    app.seek_pos = 0.0;
+    app.seek_request = false;
 }

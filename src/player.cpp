@@ -50,7 +50,6 @@ void Player::audioLoop() {
             std::iota(app->play_order.begin(), app->play_order.end(), 0);
         }
 
-        // Get actual file index
         size_t actual_file_index = app->track_idx;
         if (app->track_idx < app->play_order.size()) {
             actual_file_index = app->play_order[app->track_idx];
@@ -85,6 +84,7 @@ void Player::audioLoop() {
         }
 
         while (app->playing && app->running) {
+            // Handle Seek Request
              if (app->seek_request) {
                 off_t offset = (off_t)(app->seek_pos * app->total_frames);
                 mpg123_seek_frame(mh, offset, SEEK_SET);
@@ -95,24 +95,23 @@ void Player::audioLoop() {
 
             int ret = mpg123_read(mh, buffer, buff_size, &done);
             
-            // --- REPEAT LOGIC ---
+            // --- END OF STREAM (AUTO ADVANCE) LOGIC ---
             if (ret == MPG123_DONE) {
                 
-                // Case 1: Repeat One (Loop current track)
+                // 1. Repeat One: Loop current track
                 if (app->repeatMode == REP_ONE) {
-                    // Do not increment track_idx.
-                    // Break inner loop, which reloads the SAME track_idx
+                    // Do not change track_idx. Break to reload same file.
                     break; 
                 }
 
-                // Case 2: Normal / Repeat All
+                // 2. Normal / Repeat All
                 size_t next = app->track_idx + 1;
                 
                 if (next >= app->playlist.size()) {
                     if (app->repeatMode == REP_ALL) {
-                        next = 0; // Loop back to start
+                        next = 0; // Loop to start
                     } else {
-                        // Repeat Off
+                        // Stop at end
                         app->playing = false; 
                         app->track_idx = 0;   
                         break;
