@@ -7,6 +7,7 @@
 // File Operations
 void loadPlaylist(AppState& app, int argc, char** argv);
 bool savePlaylist(const AppState& app, std::string filename = "");
+void clearPlaylist(AppState& app); // <--- NEW
 
 // Playback Logic
 void toggleShuffle(AppState& app);

@@ -9,13 +9,13 @@ int main(int argc, char** argv) {
 
     AppState appState;
     
-    // Logic moved to playlist.cpp
-    loadPlaylist(appState, argc, argv);
-
-    if (appState.playlist.empty()) {
-        std::cout << "Usage: ./TermuxMusic95 <file.mp3> OR <folder> OR <list.m3u>" << std::endl;
-        return 1;
+    // Only try to load if arguments are present
+    if (argc >= 2) {
+        loadPlaylist(appState, argc, argv);
     }
+
+    // Removed the block that returned 1 if empty.
+    // Now it just starts empty.
 
     UI ui(&appState);
     if (!ui.init()) {

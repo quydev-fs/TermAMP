@@ -1,4 +1,5 @@
 #include "aux_windows.h"
+#include "playlist.h" // Include to access clearPlaylist
 #include <X11/Xutil.h>
 #include <sys/stat.h>
 #include <dirent.h>
@@ -7,9 +8,8 @@
 #include <iostream>
 #include <unistd.h>
 #include <limits.h>
-#include <cstdlib> // For getenv
+#include <cstdlib> 
 
-// Helper shared by aux windows
 void drawAuxBevel(Display* dpy, Window win, GC gc, int x, int y, int w, int h, bool sunken) {
     int sx = x * UI_SCALE;
     int sy = y * UI_SCALE;
@@ -67,7 +67,15 @@ void PlaylistViewer::render() {
     std::string title = "Playlist (" + std::to_string(app->playlist.size()) + ")";
     XDrawString(dpy, win, gc, 5*UI_SCALE, 11*UI_SCALE, title.c_str(), title.length());
 
+    // --- NEW: Clear Button [CLR] ---
+    // Position: x=230, y=2, w=25, h=10
+    drawAuxBevel(dpy, win, gc, 230, 2, 25, 10, false);
+    XSetForeground(dpy, gc, 0xFFFFFF);
+    XDrawString(dpy, win, gc, 234*UI_SCALE, 10*UI_SCALE, "CLR", 3);
+
+    // Close Button [X]
     drawAuxBevel(dpy, win, gc, 260, 2, 10, 10, false);
+    XSetForeground(dpy, gc, 0xFFFFFF);
     XDrawString(dpy, win, gc, 263*UI_SCALE, 10*UI_SCALE, "X", 1);
 
     XSetForeground(dpy, gc, C_VIS_BG);
@@ -100,11 +108,21 @@ void PlaylistViewer::handleInput(int x, int y) {
     x /= UI_SCALE;
     y /= UI_SCALE;
 
+    // Close Button
     if (y >= 2 && y <= 12 && x >= 260 && x <= 270) {
         hide();
         return;
     }
 
+    // --- NEW: Clear Button Logic ---
+    if (y >= 2 && y <= 12 && x >= 230 && x <= 255) {
+        clearPlaylist(*app);
+        scrollOffset = 0;
+        render(); // Re-render empty list
+        return;
+    }
+
+    // List Click
     if (y >= 20 && y <= 140) {
         int itemH = 12;
         int clickedIndex = scrollOffset + ((y - 32) / itemH) + 1; 
@@ -133,7 +151,7 @@ void PlaylistViewer::handleScroll(int direction) {
     render();
 }
 
-// ================= FILE BROWSER =================
+// ================= FILE BROWSER (UNCHANGED) =================
 
 FileBrowser::FileBrowser(AppState* state, Display* d) : app(state), dpy(d) {
     int s = DefaultScreen(dpy);
@@ -144,16 +162,13 @@ FileBrowser::FileBrowser(AppState* state, Display* d) : app(state), dpy(d) {
     XStoreName(dpy, win, "Add Files");
     gc = XCreateGC(dpy, win, 0, NULL);
     
-    // --- FIX: USE TERMUX HOME INSTEAD OF ROOT ---
     const char* termuxHome = getenv("HOME");
     if (termuxHome) {
         currentPath = termuxHome;
     } else {
-        // Fallback if HOME isn't set for some reason
         currentPath = "/data/data/com.termux/files/home";
     }
     
-    // Check if dir exists, fallback to /sdcard if Home is weird
     struct stat info;
     if(stat(currentPath.c_str(), &info) != 0) {
         currentPath = "/sdcard"; 
@@ -192,13 +207,11 @@ void FileBrowser::refreshList() {
         while ((ent = readdir(dir)) != NULL) {
             std::string name = ent->d_name;
             
-            // --- FIX: HIDE HIDDEN FILES (DOTFILES) ---
             if (name == ".") continue;
-            if (name == "..") continue; // We handled parent above manually
-            if (name[0] == '.') continue; // Skip .hidden, .config, etc.
+            if (name == "..") continue; 
+            if (name[0] == '.') continue; 
             
             bool isDir = (ent->d_type == DT_DIR);
-            // If type is unknown (common in some file systems), use stat
             if (ent->d_type == DT_UNKNOWN) {
                  struct stat st;
                  std::string full = currentPath + "/" + name;
@@ -210,7 +223,6 @@ void FileBrowser::refreshList() {
             bool isMusic = false;
             if (!isDir && name.length() > 4) {
                 std::string ext = name.substr(name.length()-4);
-                // Simple lowercase check could go here
                 if (ext == ".mp3" || ext == ".m3u") isMusic = true;
             }
 
@@ -264,11 +276,10 @@ void FileBrowser::loadFile(const std::string& filename) {
     } else {
         app->playlist.push_back(full);
     }
-    // Re-init shuffle if needed to include new track
+
     if(app->playlist.size() != app->play_order.size()) {
-        // Ideally toggleShuffle handles resize, but simple resize works for "Add"
         size_t oldSize = app->play_order.size();
-        app->play_order.push_back(oldSize); // Add new index at end
+        app->play_order.push_back(oldSize); 
     }
     hide(); 
 }

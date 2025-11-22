@@ -77,6 +77,8 @@ pkg install termux-x11 pulseaudio xproto libmpg123
 The player takes a file, directory, or `.m3u` playlist as a command-line argument:
 
 ```sh
+# Start TermuxMusic95 without loading anything
+./build/bin/TermuxMusic95
 # Play a single file
 ./build/bin/TermuxMusic95 /sdcard/Music/track.mp3
 

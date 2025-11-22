@@ -55,6 +55,28 @@ void loadPlaylist(AppState& app, int argc, char** argv) {
     std::iota(app.play_order.begin(), app.play_order.end(), 0);
 }
 
+// --- NEW FUNCTION ---
+void clearPlaylist(AppState& app) {
+    app.playing = false;
+    app.paused = false;
+    
+    app.playlist.clear();
+    app.play_order.clear();
+    
+    app.track_idx = 0;
+    app.current_frame = 0;
+    app.total_frames = 0;
+    app.seek_pos = 0.0;
+    app.seek_request = false;
+    
+    app.current_title = "TermuxMusic95";
+    
+    // Reset visuals
+    for(int i=0; i<16; i++) app.viz_bands[i] = 0;
+    
+    std::cout << "Playlist Cleared." << std::endl;
+}
+
 void toggleShuffle(AppState& app) {
     if (app.playlist.empty()) return;
 
@@ -109,22 +131,15 @@ bool savePlaylist(const AppState& app, std::string filename) {
     return true;
 }
 
-// --- NAVIGATION LOGIC ---
-
 void playNext(AppState& app, bool forceChange) {
     if (app.playlist.empty()) return;
-
-    // Manual click usually forces change even in Repeat One
-    // Auto-advance checks repeat mode in player.cpp
     
     size_t next = app.track_idx + 1;
 
     if (next >= app.playlist.size()) {
-        // End of list
         if (app.repeatMode == REP_ALL || (app.repeatMode == REP_ONE && forceChange)) {
-            next = 0; // Loop back
+            next = 0; 
         } else {
-            // Stop playback
             app.playing = false;
             app.track_idx = 0; 
             app.seek_pos = 0.0;
@@ -142,13 +157,11 @@ void playNext(AppState& app, bool forceChange) {
 void playPrevious(AppState& app) {
     if (app.playlist.empty()) return;
 
-    // 1. SMART PREVIOUS: Check position
     double current_seconds = 0.0;
     if (app.sample_rate > 0) {
         current_seconds = (double)app.current_frame / (double)app.sample_rate;
     }
 
-    // If played > 3 seconds, restart track
     if (current_seconds > 3.0) {
         app.seek_pos = 0.0;
         app.seek_request = true;
@@ -157,15 +170,13 @@ void playPrevious(AppState& app) {
         return;
     }
 
-    // 2. Go to Previous File
     if (app.track_idx > 0) {
         app.track_idx--;
     } else {
-        // At start of list
         if (app.repeatMode == REP_ALL || app.repeatMode == REP_ONE) {
-            app.track_idx = app.playlist.size() - 1; // Wrap to end
+            app.track_idx = app.playlist.size() - 1; 
         } else {
-            app.track_idx = 0; // Stay at start
+            app.track_idx = 0; 
         }
     }
     
