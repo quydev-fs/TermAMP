@@ -7,6 +7,7 @@
 #include <cmath>
 #include <algorithm>
 #include <iostream>
+#include <numeric> // Added for iota fix
 
 Player::Player(AppState* state) : app(state) {
     mpg123_init();
@@ -43,11 +44,23 @@ void Player::audioLoop() {
             continue;
         }
 
-        // --- FIX: Use Play Order Mapping ---
-        size_t actual_file_index = app->play_order[app->track_idx];
+        // --- FAIL-SAFE: Ensure Play Order exists ---
+        if (app->play_order.size() != app->playlist.size()) {
+            std::cout << "Fixing Play Order Sync..." << std::endl;
+            app->play_order.resize(app->playlist.size());
+            std::iota(app->play_order.begin(), app->play_order.end(), 0);
+        }
+
+        // Get actual file index from the shuffle map
+        size_t actual_file_index = app->track_idx;
+        if (app->track_idx < app->play_order.size()) {
+            actual_file_index = app->play_order[app->track_idx];
+        }
+
         std::string current_file = app->playlist[actual_file_index];
 
         if (mpg123_open(mh, current_file.c_str()) != MPG123_OK) {
+            std::cerr << "Failed to open: " << current_file << std::endl;
             app->playing = false;
             continue;
         }
@@ -62,7 +75,7 @@ void Player::audioLoop() {
         if (pa) pa_simple_free(pa);
         pa = pa_simple_new(NULL, "TermuxMusic95", PA_STREAM_PLAYBACK, NULL, "Music", &ss, NULL, NULL, &err);
 
-        // Metadata Update
+        // Metadata
         mpg123_id3v1* v1; mpg123_id3v2* v2;
         if (mpg123_id3(mh, &v1, &v2) == MPG123_OK) {
             if (v2 && v2->title) app->current_title = v2->title->p;
@@ -83,21 +96,22 @@ void Player::audioLoop() {
 
             int ret = mpg123_read(mh, buffer, buff_size, &done);
             
-            // --- FIX: End of Song Logic (Repeat/Next) ---
+            // --- END OF TRACK LOGIC ---
             if (ret == MPG123_DONE) {
                 size_t next = app->track_idx + 1;
+                
+                // Check against list size
                 if (next >= app->playlist.size()) {
-                    // End of playlist reached
                     if (app->repeat) {
-                        next = 0; // Loop back
+                        next = 0; 
                     } else {
-                        app->playing = false; // Stop
-                        app->track_idx = 0;   // Reset for next time
+                        app->playing = false; 
+                        app->track_idx = 0;   
                         break;
                     }
                 }
                 app->track_idx = next;
-                break; // Break inner loop to load new file
+                break; // Load new file
             }
 
             mpg123_frameinfo fi;
