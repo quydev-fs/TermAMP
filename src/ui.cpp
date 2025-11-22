@@ -17,6 +17,8 @@
 UI::UI(AppState* state) : app(state), dpy(nullptr) {}
 
 UI::~UI() {
+    if (plViewer) delete plViewer;
+    if (fileBrowser) delete fileBrowser;
     if (logoImg) { logoImg->data = NULL; XDestroyImage(logoImg); }
     if (dpy) { XDestroyWindow(dpy, win); XCloseDisplay(dpy); }
 }
@@ -26,7 +28,6 @@ bool UI::init() {
     if (!dpy) return false;
     int screen = DefaultScreen(dpy);
     
-    // Create Window with SCALED dimensions
     win = XCreateSimpleWindow(dpy, RootWindow(dpy, screen), 10, 10, W_WIDTH, W_HEIGHT, 0, 0, 0);
     
     XSelectInput(dpy, win, ExposureMask | ButtonPressMask | Button1MotionMask | KeyPressMask);
@@ -45,6 +46,10 @@ bool UI::init() {
     XMapWindow(dpy, win);
     gc = XCreateGC(dpy, win, 0, NULL);
     
+    // Init Aux Windows
+    plViewer = new PlaylistViewer(app, dpy);
+    fileBrowser = new FileBrowser(app, dpy);
+
     loadLogo();
     return true;
 }
@@ -91,8 +96,6 @@ void UI::loadLogo() {
     stbi_image_free(data);
 }
 
-// --- DRAWING HELPERS (Apply Scale Here) ---
-
 void UI::drawBevel(int x, int y, int w, int h, bool sunken) {
     int sx = x * UI_SCALE;
     int sy = y * UI_SCALE;
@@ -120,8 +123,6 @@ void UI::drawButton(int x, int y, int w, int h, const char* label, bool pressed)
     drawBevel(x, y, w, h, pressed);
     
     XSetForeground(dpy, gc, pressed ? C_TXT_GRN : 0xC0C0C0);
-    // FIX: Removed unused text_x/text_y variables
-    // We pass logical coordinates to drawText, which handles scaling internally
     drawText(x + (w - (strlen(label)*6))/2, y + (h+4)/2, label, 0);
 }
 
@@ -138,8 +139,6 @@ void UI::render() {
     XFillRectangle(dpy, win, gc, 0, 0, W_WIDTH, 14 * UI_SCALE);
     
     if (logoImg) {
-        // FIX: Removed unused drawW/drawH variables
-        // Draw logo at logical 3,1 (scaled to 3*S, 1*S)
         XPutImage(dpy, win, gc, logoImg, 0, 0, 3 * UI_SCALE, 1 * UI_SCALE, std::min(logoW, 12), std::min(logoH, 12));
     }
     drawBevel(0, 0, LOGICAL_WIDTH, 14, false);
@@ -205,10 +204,15 @@ void UI::render() {
     drawButton(85, by, 20, 18, "[]", false);
     drawButton(108, by, 20, 18, ">|", false); 
 
+    // 3. Option Buttons
     drawButton(200, 90, 20, 12, "SH", app->shuffle);
     const char* rpLabel = (app->repeatMode == REP_ONE) ? "1" : (app->repeatMode == REP_ALL ? "AL" : "RP");
     drawButton(225, 90, 20, 12, rpLabel, app->repeatMode != REP_OFF);
-    drawButton(250, 90, 20, 12, "SV", false); 
+    
+    // --- NEW BUTTONS: OPEN (OP) and PLAYLIST (PL) ---
+    // We replace SV with OP, add PL.
+    drawButton(250, 90, 10, 12, "O", false); // Open (tiny button)
+    drawButton(262, 90, 10, 12, "P", false); // Playlist (tiny button)
 }
 
 void UI::handleInput(int raw_x, int raw_y) {
@@ -233,8 +237,11 @@ void UI::handleInput(int raw_x, int raw_y) {
             mode = (mode + 1) % 3;
             app->repeatMode = mode;
         }
-        else if (x >= 250 && x <= 270) { 
-            savePlaylist(*app);
+        else if (x >= 250 && x <= 260) { // "O" Open File
+            fileBrowser->show();
+        }
+        else if (x >= 262 && x <= 272) { // "P" Playlist
+            plViewer->show();
         }
     }
 
@@ -270,11 +277,25 @@ void UI::runLoop() {
     while (app->running) {
         if (XPending(dpy)) {
             XNextEvent(dpy, &e);
-            if (e.type == ClientMessage && (unsigned long)e.xclient.data.l[0] == wmDeleteMessage) app->running = false;
-            else if (e.type == Expose) render();
-            else if (e.type == ButtonPress) { handleInput(e.xbutton.x, e.xbutton.y); render(); }
-            else if (e.type == MotionNotify && (e.xmotion.state & Button1Mask)) { handleInput(e.xmotion.x, e.xmotion.y); render(); }
-            else if (e.type == KeyPress) { handleKey(XLookupKeysym(&e.xkey, 0)); render(); }
+            
+            // DISPATCH EVENTS TO CORRECT WINDOWS
+            if (e.xany.window == win) {
+                // Main Window Event
+                if (e.type == ClientMessage && (unsigned long)e.xclient.data.l[0] == wmDeleteMessage) app->running = false;
+                else if (e.type == Expose) render();
+                else if (e.type == ButtonPress) { handleInput(e.xbutton.x, e.xbutton.y); render(); }
+                else if (e.type == MotionNotify && (e.xmotion.state & Button1Mask)) { handleInput(e.xmotion.x, e.xmotion.y); render(); }
+                else if (e.type == KeyPress) { handleKey(XLookupKeysym(&e.xkey, 0)); render(); }
+            }
+            else if (plViewer && e.xany.window == plViewer->getWindow()) {
+                if (e.type == Expose) plViewer->render();
+                else if (e.type == ButtonPress) plViewer->handleInput(e.xbutton.x, e.xbutton.y);
+            }
+            else if (fileBrowser && e.xany.window == fileBrowser->getWindow()) {
+                if (e.type == Expose) fileBrowser->render();
+                else if (e.type == ButtonPress) fileBrowser->handleInput(e.xbutton.x, e.xbutton.y);
+            }
+            
         } else {
             render();
             usleep(33000);

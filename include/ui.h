@@ -2,9 +2,10 @@
 #define UI_H
 
 #include "common.h"
+#include "aux_windows.h" // Include new header
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
-#include <X11/Xatom.h> // Needed for _NET_WM_ICON
+#include <X11/Xatom.h> 
 
 class UI {
 public:
@@ -17,8 +18,6 @@ private:
     void render();
     void handleInput(int x, int y);
     void handleKey(KeySym ks);
-    
-    // New function to handle logo loading
     void loadLogo();
 
     void drawBevel(int x, int y, int w, int h, bool sunken);
@@ -31,10 +30,14 @@ private:
     GC gc;
     Atom wmDeleteMessage;
     
-    // Logo Image Data
+    // Logo
     XImage* logoImg = nullptr; 
     int logoW = 0;
     int logoH = 0;
+
+    // New Auxiliary Windows
+    PlaylistViewer* plViewer = nullptr;
+    FileBrowser* fileBrowser = nullptr;
 };
 
 #endif
