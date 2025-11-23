@@ -8,24 +8,25 @@ class PlaylistManager {
 public:
     PlaylistManager(AppState* state, Player* player, GtkWidget* listBox);
     
+    // File Ops
     void addFiles();
     void clear();
     void refreshUI();
     
-    // List Interaction
+    // Controls
     void onRowActivated(GtkListBox* box, GtkListBoxRow* row);
-    
-    // Keyboard Selection (Moves highlight only)
     void selectNext();
     void selectPrev();
     void deleteSelected();
-
-    // Playback Controls (Actually changes the song)
     void playNext();
     void playPrev();
+    void autoAdvance();
+
+    // NEW: State Toggles
+    void toggleShuffle();
+    void toggleRepeat();
 
 private:
-    // Helper to sync UI highlight with actual playing track
     void highlightCurrentTrack();
 
     AppState* app;

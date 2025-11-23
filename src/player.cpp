@@ -22,6 +22,11 @@ Player::~Player() {
     }
 }
 
+void Player::setEOSCallback(EOSCallback cb, void* data) {
+    onEOS = cb;
+    eosData = data;
+}
+
 void Player::load(const std::string& path) {
     stop(); 
     
@@ -29,7 +34,6 @@ void Player::load(const std::string& path) {
     gchar *uri = gst_filename_to_uri(path.c_str(), &error);
     
     if (error) {
-        // Fallback for already formatted URIs
         if (path.find("file://") == 0 || path.find("http://") == 0) {
              g_object_set(G_OBJECT(pipeline), "uri", path.c_str(), NULL);
         } else {
@@ -63,7 +67,20 @@ void Player::stop() {
     app->paused = false;
 }
 
-// --- NEW: Get Position ---
+// --- NEW: Volume (0.0 - 1.0) ---
+void Player::setVolume(double volume) {
+    if (!pipeline) return;
+    g_object_set(G_OBJECT(pipeline), "volume", volume, NULL);
+}
+
+// --- NEW: Seek ---
+void Player::seek(double seconds) {
+    if (!pipeline) return;
+    gst_element_seek_simple(pipeline, GST_FORMAT_TIME, 
+        (GstSeekFlags)(GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_KEY_UNIT), 
+        (gint64)(seconds * GST_SECOND));
+}
+
 double Player::getPosition() {
     if (!pipeline) return 0.0;
     gint64 pos = 0;
@@ -73,12 +90,22 @@ double Player::getPosition() {
     return 0.0;
 }
 
+// --- NEW: Duration ---
+double Player::getDuration() {
+    if (!pipeline) return 0.0;
+    gint64 dur = 0;
+    if (gst_element_query_duration(pipeline, GST_FORMAT_TIME, &dur)) {
+        return (double)dur / GST_SECOND;
+    }
+    return 0.0;
+}
+
 gboolean Player::busCallback(GstBus* bus, GstMessage* msg, gpointer data) {
     Player* player = (Player*)data;
     switch (GST_MESSAGE_TYPE(msg)) {
         case GST_MESSAGE_EOS:
-            // TODO: Auto-advance logic should be triggered here in a full app
-            player->stop();
+            if (player->onEOS) player->onEOS(player->eosData);
+            else player->stop();
             break;
         case GST_MESSAGE_ERROR:
             player->stop();

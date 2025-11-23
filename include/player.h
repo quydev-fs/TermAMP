@@ -3,6 +3,9 @@
 
 #include "common.h"
 #include <gst/gst.h>
+#include <functional>
+
+typedef void (*EOSCallback)(void* user_data);
 
 class Player {
 public:
@@ -13,16 +16,22 @@ public:
     void play();
     void pause();
     void stop();
-    void setVolume(double vol); // Not implemented in UI yet, but good to have
     
-    // NEW: Returns current position in seconds
-    double getPosition(); 
+    // --- NEW CONTROLS ---
+    void setVolume(double volume); // 0.0 to 1.0
+    void seek(double seconds);
+    double getPosition();
+    double getDuration();
 
+    void setEOSCallback(EOSCallback cb, void* data);
     static gboolean busCallback(GstBus* bus, GstMessage* msg, gpointer data);
 
 private:
     AppState* app;
     GstElement* pipeline;
+    
+    EOSCallback onEOS = nullptr;
+    void* eosData = nullptr;
 };
 
 #endif

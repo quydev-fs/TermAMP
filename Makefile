@@ -11,21 +11,29 @@ TARGET  := $(BIN_DIR)/TermuxMusic95
 SRCS    := $(wildcard $(SRC_DIR)/*.cpp)
 OBJS    := $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(SRCS))
 
-all: directories $(TARGET)
+TOTAL := $(words $(SRCS))
+CURRENT = $(words $(filter %.o,$(wildcard $(OBJ_DIR)/*.o)))
 
-$(TARGET): $(OBJS)
-	@echo "Linking..."
-	$(CXX) $(OBJS) -o $@ $(LDFLAGS)
+all: directories compile-all link
+
+compile-all: $(OBJS)
+
+link: $(OBJS)
+	@echo "[$(TOTAL)/$(TOTAL)] Linking..."
+	@$(CXX) $(OBJS) -o $(TARGET) $(LDFLAGS)
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
-	@echo "Compiling $<..."
+	@BUILT=$$(ls $(OBJ_DIR)/*.o 2>/dev/null | wc -l); \
+	CURRENT=$$(($$BUILT + 1)); \
+	echo "[$$CURRENT/$(TOTAL)] Compiling $<..."; \
 	$(CXX) $(CXXFLAGS) -I$(INC_DIR) -c $< -o $@
 
 directories:
+	@echo "[CHORE] initalizing things for build process"
 	@mkdir -p $(OBJ_DIR)
 	@mkdir -p $(BIN_DIR)
 
 clean:
 	rm -rf build
 
-.PHONY: all clean directories
+.PHONY: all compile-all link clean directories
