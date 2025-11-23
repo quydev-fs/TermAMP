@@ -131,7 +131,7 @@ make
 ### Install system-wide (optional)
 
 ```sh
-sudo cp build/bin/TermuxMusic95 /usr/local/bin/
+ln -s $HOME/TermuxMusic95/build/bin/TermuxMusic95 $PREFIX/bin/TermuxMusic95
 ```
 
 Now you can run `TermuxMusic95` from anywhere!
