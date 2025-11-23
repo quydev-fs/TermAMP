@@ -13,10 +13,11 @@ public:
     void play();
     void pause();
     void stop();
-    void setVolume(double vol);
-    bool isPlaying();
+    void setVolume(double vol); // Not implemented in UI yet, but good to have
     
-    // Auto-advance callback
+    // NEW: Returns current position in seconds
+    double getPosition(); 
+
     static gboolean busCallback(GstBus* bus, GstMessage* msg, gpointer data);
 
 private:

@@ -23,23 +23,20 @@ Player::~Player() {
 }
 
 void Player::load(const std::string& path) {
-    stop(); // Reset pipeline state
+    stop(); 
     
-    // FIX: Use GStreamer's built-in URI converter
-    // This handles spaces, special chars, and absolute paths automatically.
     GError *error = NULL;
     gchar *uri = gst_filename_to_uri(path.c_str(), &error);
     
     if (error) {
-        // If conversion failed, maybe it's already a URI (http://... or file://...)
+        // Fallback for already formatted URIs
         if (path.find("file://") == 0 || path.find("http://") == 0) {
              g_object_set(G_OBJECT(pipeline), "uri", path.c_str(), NULL);
         } else {
-             std::cerr << "URI Error: " << error->message << " [" << path << "]" << std::endl;
+             std::cerr << "URI Error: " << error->message << std::endl;
         }
         g_error_free(error);
     } else {
-        // std::cout << "Loading URI: " << uri << std::endl; // Debug
         g_object_set(G_OBJECT(pipeline), "uri", uri, NULL);
         g_free(uri);
     }
@@ -47,14 +44,9 @@ void Player::load(const std::string& path) {
 
 void Player::play() {
     if (!pipeline) return;
-    GstStateChangeReturn ret = gst_element_set_state(pipeline, GST_STATE_PLAYING);
-    
-    if (ret == GST_STATE_CHANGE_FAILURE) {
-        std::cerr << "Error: Failed to start playback." << std::endl;
-    } else {
-        app->playing = true;
-        app->paused = false;
-    }
+    gst_element_set_state(pipeline, GST_STATE_PLAYING);
+    app->playing = true;
+    app->paused = false;
 }
 
 void Player::pause() {
@@ -71,26 +63,26 @@ void Player::stop() {
     app->paused = false;
 }
 
+// --- NEW: Get Position ---
+double Player::getPosition() {
+    if (!pipeline) return 0.0;
+    gint64 pos = 0;
+    if (gst_element_query_position(pipeline, GST_FORMAT_TIME, &pos)) {
+        return (double)pos / GST_SECOND;
+    }
+    return 0.0;
+}
+
 gboolean Player::busCallback(GstBus* bus, GstMessage* msg, gpointer data) {
     Player* player = (Player*)data;
     switch (GST_MESSAGE_TYPE(msg)) {
         case GST_MESSAGE_EOS:
-            // In a full implementation, trigger 'next track' here
+            // TODO: Auto-advance logic should be triggered here in a full app
             player->stop();
             break;
-        case GST_MESSAGE_ERROR: {
-            GError *err;
-            gchar *debug;
-            gst_message_parse_error(msg, &err, &debug);
-            std::cerr << "GStreamer Error: " << err->message << std::endl;
-            if (debug) {
-                // std::cerr << "Debug info: " << debug << std::endl;
-                g_free(debug);
-            }
-            g_error_free(err);
+        case GST_MESSAGE_ERROR:
             player->stop();
             break;
-        }
         default:
             break;
     }

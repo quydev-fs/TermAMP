@@ -9,16 +9,25 @@ public:
     PlaylistManager(AppState* state, Player* player, GtkWidget* listBox);
     
     void addFiles();
-    void clear(); // Added for your "Clear Playlist" request
-    void onRowActivated(GtkListBox* box, GtkListBoxRow* row);
+    void clear();
     void refreshUI();
     
-    // Selection/Keyboard helpers
+    // List Interaction
+    void onRowActivated(GtkListBox* box, GtkListBoxRow* row);
+    
+    // Keyboard Selection (Moves highlight only)
     void selectNext();
     void selectPrev();
     void deleteSelected();
 
+    // Playback Controls (Actually changes the song)
+    void playNext();
+    void playPrev();
+
 private:
+    // Helper to sync UI highlight with actual playing track
+    void highlightCurrentTrack();
+
     AppState* app;
     Player* player;
     GtkWidget* listBox; 
