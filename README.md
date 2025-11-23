@@ -28,13 +28,27 @@
 ## 🛠️ Prerequisites
 
 Make sure you have these components installed in your Termux environment:
-
+- Termux:
 ```sh
 pkg install clang make x11-repo
-pkg install termux-x11 pulseaudio xproto libmpg123
+pkg install termux-x11-nightly pkg-config gtk3 gstreamer gstreamer-plugins
+```
+- Debian-based distros:
+```sh
+sudo apt update
+sudo apt install build-essential clang pkg-config libstdc++-dev libgtk-3-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
+```
+- Arch-based distros
+```sh
+# 1. Install development tools
+sudo pacman -S base-devel
+
+# 2. Install GTK3 and GStreamer libraries
+sudo pacman -S gtk3 gstreamer gst-plugins-base
+
 ```
 
-1. **X Server:**  
+1. **X Server (For Termux):**
    Launch an X server with:
    ```sh
    termux-x11 :0 &
