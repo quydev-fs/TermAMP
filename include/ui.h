@@ -17,10 +17,10 @@ private:
     void loadLogo();
     
     // --- Mode Control ---
-    void toggleMiniMode(bool force_resize = false); // Helper function
+    void toggleMiniMode(bool force_resize = false); 
     static void onMiniModeClicked(GtkButton* btn, gpointer data);
 
-    // --- Signal Handlers ---
+    // --- Signal Handlers (ALL DECLARED HERE) ---
     static void onPlayClicked(GtkButton* btn, gpointer data);
     static void onPauseClicked(GtkButton* btn, gpointer data);
     static void onStopClicked(GtkButton* btn, gpointer data);
@@ -31,10 +31,13 @@ private:
     static void onShuffleClicked(GtkButton* btn, gpointer data);
     static void onRepeatClicked(GtkButton* btn, gpointer data);
     
+    // --- Slider Signals ---
     static void onVolumeChanged(GtkRange* range, gpointer data);
     static gboolean onSeekPress(GtkWidget* widget, GdkEvent* event, gpointer data);
     static gboolean onSeekRelease(GtkWidget* widget, GdkEvent* event, gpointer data);
     static void onSeekChanged(GtkRange* range, gpointer data);
+    
+    // --- Update Loops ---
     static gboolean onUpdateTick(gpointer data);
     static gboolean onKeyPress(GtkWidget* widget, GdkEventKey* event, gpointer data);
 
@@ -53,11 +56,14 @@ private:
     GtkWidget* volScale;
     GtkWidget* btnShuffle;
     GtkWidget* btnRepeat;
-    GtkWidget* btnMiniMode; // NEW
+    GtkWidget* btnMiniMode;
+    
+    // Containers
+    GtkWidget* visualizerContainerBox;
 
     // State
     bool isSeeking = false;
-    bool is_mini_mode = false; // NEW
+    bool is_mini_mode = false;
 };
 
 #endif
