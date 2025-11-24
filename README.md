@@ -1,23 +1,24 @@
-# TermuxMusic95
+# TermAMP
 
 <p align="center">
   <img src="assets/icons/logo.jpg" />
 </p>
 
-*An X11-based MP3 player for Termux, inspired by WinAMP 2.x and written entirely in C++.*
+*An GTK-based MP3 player for Termux, inspired by WinAMP 2.x and written entirely in C++.*
 
 ***
 
 ## 🚀 Overview
 
-**TermuxMusic95** brings the nostalgic look and functionality of WinAMP 2.x to Android’s Termux environment. With a familiar GUI rendered via X11, robust MP3 playback thanks to `mpg123`, PulseAudio integration, and real-time spectrum visualizations via FFT, this project demonstrates what’s possible with modern terminal environments on Android.
+**TermAMP** brings the nostalgic look and functionality of WinAMP 2.x to Android’s Termux environment. With a familiar GUI rendered via X11, robust MP3 playback thanks to `mpg123`, PulseAudio integration, and real-time spectrum visualizations via FFT, this project demonstrates what’s possible with modern terminal environments on Android.
 
 ***
 
 ## ✨ Features
 
-- Classic WinAMP-inspired graphical user interface (X11)
-- MP3 playback with metadata support (`mpg123`)
+- Classic WinAMP-inspired graphical user interface (GTK)
+**Universal audio format support**: MP3, FLAC, OGG, AAC, WAV, Opus, M4A, WMA, ALAC, APE, and more!
+- 📊 Real-time waveform visualizer
 - PulseAudio streaming
 - Real-time spectrum analyzer (FFT-based)
 - Keyboard and mouse controls
@@ -28,12 +29,12 @@
 
 ```sh
 # Clone and build
-git clone https://github.com/quydev-fs/TermuxMusic95.git
-cd TermuxMusic95
+git clone https://github.com/quydev-fs/TermAMP.git
+cd TermAMP
 make
 
 # Run
-./build/bin/TermuxMusic95
+./build/bin/TermAMP
 ```
 
 For detailed build instructions, see [BUILDING.md](docs/BUILDING.md)
@@ -47,7 +48,7 @@ For detailed build instructions, see [BUILDING.md](docs/BUILDING.md)
 | include/      | C++ header files                                    |
 | build/        | Compiled build artifacts (executables, binaries)    |
 | Makefile      | Build script usingg++, links all required libraries |
-| main.cpp      | Entry point, parses arguments and playlist          |
+| src/main.cpp      | Entry point, parses arguments and playlist          |
 
 ***
 
@@ -56,16 +57,16 @@ For detailed build instructions, see [BUILDING.md](docs/BUILDING.md)
 The player takes a file, directory, or `.m3u` playlist as a command-line argument:
 
 ```sh
-# Start TermuxMusic95 without loading anything
-./build/bin/TermuxMusic95
+# Start TermAMP without loading anything
+./build/bin/TermAMP
 # Play a single file
-./build/bin/TermuxMusic95 /sdcard/Music/track.mp3
+./build/bin/TermAMP /sdcard/Music/track.mp3
 
 # Play all MP3s in a directory
-./build/bin/TermuxMusic95 /sdcard/Music/AlbumFolder
+./build/bin/TermAMP /sdcard/Music/AlbumFolder
 
 # Play using an M3U playlist
-./build/bin/TermuxMusic95 /sdcard/Playlists/playlist.m3u
+./build/bin/TermAMP /sdcard/Playlists/playlist.m3u
 ```
 
 ***

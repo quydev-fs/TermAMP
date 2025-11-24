@@ -1,6 +1,6 @@
-# Building TermuxMusic95
+# Building TermAMP
 
-This guide covers installation of dependencies and building TermuxMusic95 from source.
+This guide covers installation of dependencies and building TermAMP from source.
 
 ***
 
@@ -16,7 +16,7 @@ pkg update && pkg upgrade
 pkg install clang make x11-repo
 
 # Install dependencies
-pkg install termux-x11-nightly pkg-config gtk3 gstreamer gst-plugins-base gst-plugins-good
+pkg install termux-x11-nightly pkg-config gtk3 gstreamer gst-plugins-base gst-plugins-good gst-plugins-bad gst-plugins-ugly gst-plugins-libav
 ```
 
 ### Debian/Ubuntu-based Linux
@@ -29,7 +29,7 @@ sudo apt update
 sudo apt install build-essential clang pkg-config libstdc++-dev
 
 # Install GTK3 and GStreamer
-sudo apt install libgtk-3-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev gstreamer1.0-plugins-good
+sudo apt install libgtk-3-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-libav
 ```
 
 ### Arch Linux
@@ -39,7 +39,7 @@ sudo apt install libgtk-3-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-d
 sudo pacman -S base-devel clang
 
 # Install GTK3 and GStreamer libraries
-sudo pacman -S gtk3 gstreamer gst-plugins-base gst-plugins-good
+sudo pacman -S gtk3 gstreamer gst-plugins-base gst-plugins-good gst-plugins-bad gst-plugins-ugly gst-libav
 ```
 
 ### Fedora/RHEL-based Linux
@@ -50,14 +50,14 @@ sudo dnf groupinstall "Development Tools"
 sudo dnf install clang
 
 # Install GTK3 and GStreamer
-sudo dnf install gtk3-devel gstreamer1-devel gstreamer1-plugins-base-devel gstreamer1-plugins-good
+sudo dnf install gtk3-devel gstreamer1-devel gstreamer1-plugins-base-devel gstreamer1-plugins-good gstreamer1-plugins-bad gstreamer1-plugins-ugly gstreamer1-plugins-libav
 ```
 
 ***
 
 ## 🖥️ X11 Setup (Termux Only)
 
-TermuxMusic95 requires an X11 server to display its GUI on Android.
+TermAMP requires an X11 server to display its GUI on Android.
 
 ### 1. Install Termux:X11 app
 
@@ -89,8 +89,8 @@ source ~/.bashrc
 ### 1. Clone the repository
 
 ```sh
-git clone https://github.com/quydev-fs/TermuxMusic95.git
-cd TermuxMusic95
+git clone https://github.com/quydev-fs/TermAMP.git
+cd TermAMP
 ```
 
 ### 2. Build the project
@@ -102,12 +102,12 @@ make
 This will:
 - Compile all source files in `src/`
 - Generate object files in `build/obj/`
-- Create the executable at `build/bin/TermuxMusic95`
+- Create the executable at `build/bin/TermAMP`
 
 ### 3. Run the player
 
 ```sh
-./build/bin/TermuxMusic95
+./build/bin/TermAMP
 ```
 
 ***
@@ -131,10 +131,10 @@ make
 ### Install system-wide (optional)
 
 ```sh
-ln -s $HOME/TermuxMusic95/build/bin/TermuxMusic95 $PREFIX/bin/TermuxMusic95
+ln -s $HOME/TermAMP/build/bin/TermAMP $PREFIX/bin/TermAMP
 ```
 
-Now you can run `TermuxMusic95` from anywhere!
+Now you can run `TermAMP` from anywhere!
 
 ***
 
@@ -197,26 +197,28 @@ sudo pacman -S gst-plugins-good
 ## 📊 Project Structure
 
 ```
-TermuxMusic95/
-├── src/              # C++ source files
-│   ├── main.cpp
-│   ├── player.cpp
-│   ├── playlist.cpp
-│   ├── ui.cpp
-│   └── visualizer.cpp
-├── include/          # Header files
-│   ├── common.h
+TermAMP/
+├── src/                 # C++ source files
+│   ├── main.cpp        # Application entry point
+│   ├── player.cpp      # Audio playback engine
+│   ├── playlist.cpp    # Playlist management
+│   ├── ui.cpp          # Terminal user interface
+│   └── visualizer.cpp  # Audio visualization
+├── include/            # Header files
+│   ├── common.h        # Common definitions & utilities
 │   ├── player.h
 │   ├── playlist.h
 │   ├── ui.h
 │   └── visualizer.h
-├── build/            # Build artifacts (generated)
-│   ├── obj/         # Object files
-│   └── bin/         # Executable
-├── assets/           # Resources
-│   └── icons/
-├── Makefile          # Build configuration
-└── README.md
+├── build/              # Build artifacts (generated)
+│   ├── obj/           # Object files
+│   └── bin/           # Executable output
+├── assets/             # Application resources
+│   ├── icons/
+│   │   └── logo.jpg   # Application logo
+│   └── style.css      # UI styling
+├── Makefile           # Build configuration
+└── README.md          # Project documentation
 ```
 
 ***
@@ -226,7 +228,7 @@ TermuxMusic95/
 For convenience, here's a one-liner to build and run:
 
 ```sh
-git clone https://github.com/quydev-fs/TermuxMusic95.git && cd TermuxMusic95 && make && ./build/bin/TermuxMusic95
+git clone https://github.com/quydev-fs/TermAMP.git && cd TermAMP && make && ./build/bin/TermAMP
 ```
 
 ***
@@ -239,4 +241,4 @@ git clone https://github.com/quydev-fs/TermuxMusic95.git && cd TermuxMusic95 && 
 
 ***
 
-**Need help?** Open an issue on [GitHub](https://github.com/quydev-fs/TermuxMusic95/issues)!
+**Need help?** Open an issue on [GitHub](https://github.com/quydev-fs/TermAMP/issues)!

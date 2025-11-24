@@ -7,7 +7,7 @@ INC_DIR := include
 OBJ_DIR := build/obj
 BIN_DIR := build/bin
 
-TARGET  := $(BIN_DIR)/TermuxMusic95
+TARGET  := $(BIN_DIR)/TermAMP
 SRCS    := $(wildcard $(SRC_DIR)/*.cpp)
 OBJS    := $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(SRCS))
 
@@ -34,6 +34,7 @@ directories:
 	@mkdir -p $(BIN_DIR)
 
 clean:
-	rm -rf build
+	@rm -rf build
+	@echo "[CLEAN] done cleaning build artifacts"
 
 .PHONY: all compile-all link clean directories
