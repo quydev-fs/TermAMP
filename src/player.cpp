@@ -1,5 +1,6 @@
 #include "player.h"
 #include <iostream>
+#include <filesystem> // C++17 feature for filename extraction
 
 Player::Player(AppState* state) : app(state) {
     gst_init(NULL, NULL);
@@ -30,6 +31,12 @@ void Player::setEOSCallback(EOSCallback cb, void* data) {
 void Player::load(const std::string& path) {
     stop(); 
     
+    // 1. Set Fallback Name (Filename) immediately
+    // This ensures we don't show the OLD song title while loading the NEW one
+    std::string filename = std::filesystem::path(path).filename().string();
+    app->current_track_name = filename; // Default to filename
+    
+    // 2. Load GStreamer URI
     GError *error = NULL;
     gchar *uri = gst_filename_to_uri(path.c_str(), &error);
     
@@ -65,15 +72,14 @@ void Player::stop() {
     gst_element_set_state(pipeline, GST_STATE_NULL);
     app->playing = false;
     app->paused = false;
+    app->current_track_name = "Ready"; // Reset on full stop
 }
 
-// --- NEW: Volume (0.0 - 1.0) ---
 void Player::setVolume(double volume) {
     if (!pipeline) return;
     g_object_set(G_OBJECT(pipeline), "volume", volume, NULL);
 }
 
-// --- NEW: Seek ---
 void Player::seek(double seconds) {
     if (!pipeline) return;
     gst_element_seek_simple(pipeline, GST_FORMAT_TIME, 
@@ -90,7 +96,6 @@ double Player::getPosition() {
     return 0.0;
 }
 
-// --- NEW: Duration ---
 double Player::getDuration() {
     if (!pipeline) return 0.0;
     gint64 dur = 0;
@@ -98,6 +103,31 @@ double Player::getDuration() {
         return (double)dur / GST_SECOND;
     }
     return 0.0;
+}
+
+// --- NEW: Tag Handler Helper ---
+void Player::handleTags(GstTagList* tags) {
+    gchar *artist = NULL;
+    gchar *title = NULL;
+
+    // Try to get Artist and Title
+    gst_tag_list_get_string(tags, GST_TAG_ARTIST, &artist);
+    gst_tag_list_get_string(tags, GST_TAG_TITLE, &title);
+
+    if (title) {
+        std::string meta;
+        if (artist) {
+            meta = std::string(artist) + " - " + std::string(title);
+        } else {
+            meta = std::string(title);
+        }
+        
+        // Update App State
+        app->current_track_name = meta;
+        
+        g_free(title);
+        if (artist) g_free(artist);
+    }
 }
 
 gboolean Player::busCallback(GstBus* bus, GstMessage* msg, gpointer data) {
@@ -110,6 +140,14 @@ gboolean Player::busCallback(GstBus* bus, GstMessage* msg, gpointer data) {
         case GST_MESSAGE_ERROR:
             player->stop();
             break;
+        // --- NEW: Handle Metadata Tags ---
+        case GST_MESSAGE_TAG: {
+            GstTagList *tags = NULL;
+            gst_message_parse_tag(msg, &tags);
+            player->handleTags(tags);
+            gst_tag_list_unref(tags);
+            break;
+        }
         default:
             break;
     }

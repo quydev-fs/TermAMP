@@ -22,7 +22,7 @@ void PlaylistManager::highlightCurrentTrack() {
     }
 }
 
-// --- FILE CHOOSER (UPDATED FILTERS) ---
+// --- FILE CHOOSER ---
 void PlaylistManager::addFiles() {
     GtkWidget *dialog = gtk_file_chooser_dialog_new("Add Music",
                                          GTK_WINDOW(parentWindow),
@@ -37,43 +37,32 @@ void PlaylistManager::addFiles() {
     GtkFileFilter* filter = gtk_file_filter_new();
     gtk_file_filter_set_name(filter, "Supported Audio");
 
-    // --- Tier 1: Common ---
-    gtk_file_filter_add_pattern(filter, "*.mp3");
-    gtk_file_filter_add_pattern(filter, "*.MP3");
-    gtk_file_filter_add_pattern(filter, "*.wav");
-    gtk_file_filter_add_pattern(filter, "*.WAV");
-    gtk_file_filter_add_pattern(filter, "*.ogg");
-    gtk_file_filter_add_pattern(filter, "*.OGG");
-    gtk_file_filter_add_pattern(filter, "*.flac");
-    gtk_file_filter_add_pattern(filter, "*.FLAC");
-    gtk_file_filter_add_pattern(filter, "*.m4a");
-    gtk_file_filter_add_pattern(filter, "*.M4A");
-    gtk_file_filter_add_pattern(filter, "*.aac");
-    gtk_file_filter_add_pattern(filter, "*.AAC");
-    gtk_file_filter_add_pattern(filter, "*.opus");
-    gtk_file_filter_add_pattern(filter, "*.OPUS");
+    // Tier 1
+    gtk_file_filter_add_pattern(filter, "*.mp3"); gtk_file_filter_add_pattern(filter, "*.MP3");
+    gtk_file_filter_add_pattern(filter, "*.wav"); gtk_file_filter_add_pattern(filter, "*.WAV");
+    gtk_file_filter_add_pattern(filter, "*.ogg"); gtk_file_filter_add_pattern(filter, "*.OGG");
+    gtk_file_filter_add_pattern(filter, "*.flac"); gtk_file_filter_add_pattern(filter, "*.FLAC");
+    gtk_file_filter_add_pattern(filter, "*.m4a"); gtk_file_filter_add_pattern(filter, "*.M4A");
+    gtk_file_filter_add_pattern(filter, "*.aac"); gtk_file_filter_add_pattern(filter, "*.AAC");
+    gtk_file_filter_add_pattern(filter, "*.opus"); gtk_file_filter_add_pattern(filter, "*.OPUS");
 
-    // --- Tier 2: Nice-to-Have ---
-    gtk_file_filter_add_pattern(filter, "*.wma");
-    gtk_file_filter_add_pattern(filter, "*.WMA");
-    gtk_file_filter_add_pattern(filter, "*.ape"); // Monkey's Audio
-    gtk_file_filter_add_pattern(filter, "*.APE");
-    gtk_file_filter_add_pattern(filter, "*.alac");
-    gtk_file_filter_add_pattern(filter, "*.ALAC");
-    gtk_file_filter_add_pattern(filter, "*.mka");
-    gtk_file_filter_add_pattern(filter, "*.MKA");
+    // Tier 2
+    gtk_file_filter_add_pattern(filter, "*.wma"); gtk_file_filter_add_pattern(filter, "*.WMA");
+    gtk_file_filter_add_pattern(filter, "*.ape"); gtk_file_filter_add_pattern(filter, "*.APE");
+    gtk_file_filter_add_pattern(filter, "*.alac"); gtk_file_filter_add_pattern(filter, "*.ALAC");
+    gtk_file_filter_add_pattern(filter, "*.mka"); gtk_file_filter_add_pattern(filter, "*.MKA");
 
-    // --- Tier 3: Exotic/Tracker ---
-    gtk_file_filter_add_pattern(filter, "*.mod"); // ProTracker
-    gtk_file_filter_add_pattern(filter, "*.xm");  // FastTracker 2
-    gtk_file_filter_add_pattern(filter, "*.it");  // Impulse Tracker
-    gtk_file_filter_add_pattern(filter, "*.s3m"); // Scream Tracker 3
-    gtk_file_filter_add_pattern(filter, "*.mid"); // MIDI
+    // Tier 3
+    gtk_file_filter_add_pattern(filter, "*.mod"); 
+    gtk_file_filter_add_pattern(filter, "*.xm");  
+    gtk_file_filter_add_pattern(filter, "*.it");  
+    gtk_file_filter_add_pattern(filter, "*.s3m"); 
+    gtk_file_filter_add_pattern(filter, "*.mid"); 
     gtk_file_filter_add_pattern(filter, "*.midi");
-    gtk_file_filter_add_pattern(filter, "*.dsd"); // Direct Stream Digital
+    gtk_file_filter_add_pattern(filter, "*.dsd"); 
     gtk_file_filter_add_pattern(filter, "*.dsf");
 
-    // --- Playlists ---
+    // Playlists
     gtk_file_filter_add_pattern(filter, "*.m3u");
     gtk_file_filter_add_pattern(filter, "*.M3U");
 
@@ -89,7 +78,6 @@ void PlaylistManager::addFiles() {
             char *cpath = (char *)iter->data;
             std::string path(cpath);
             
-            // Check for M3U
             bool isM3u = false;
             if (path.length() > 4) {
                 std::string ext = path.substr(path.length() - 4);
@@ -117,19 +105,20 @@ void PlaylistManager::addFiles() {
                     }
                 }
             } else {
-                // Simply add the path. GStreamer playbin handles the format detection.
                 app->playlist.push_back(path);
             }
             g_free(cpath);
         }
         g_slist_free(filenames);
         
-        // Expand play_order
         size_t newSize = app->playlist.size();
         app->play_order.resize(newSize);
         for(size_t i = oldSize; i < newSize; i++) {
             app->play_order[i] = i;
         }
+        
+        // If shuffling was already on, we might want to re-shuffle or just append
+        // For now, we just append linearly to keep it simple.
         
         refreshUI();
     }
@@ -254,14 +243,26 @@ void PlaylistManager::playPrev() {
     highlightCurrentTrack();
 }
 
-// --- STATE TOGGLES ---
+// --- FIXED: STATE TOGGLES (CRASH FIX) ---
 void PlaylistManager::toggleShuffle() {
     app->shuffle = !app->shuffle;
+    
+    // GUARD CLAUSE: If playlist is empty, stop here. 
+    // We toggled the bool so the UI button will turn green (which is fine),
+    // but we MUST NOT touch the vectors.
+    if (app->playlist.empty()) return;
+
     if (app->shuffle) {
+        // Turning ON Shuffle
         size_t current_real_idx = 0;
-        if (app->current_track_idx != -1) current_real_idx = app->play_order[app->current_track_idx];
+        if (app->current_track_idx != -1) {
+            current_real_idx = app->play_order[app->current_track_idx];
+        }
+
         unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
         std::shuffle(app->play_order.begin(), app->play_order.end(), std::default_random_engine(seed));
+
+        // Map current song to new index
         if (app->current_track_idx != -1) {
             for(size_t i=0; i<app->play_order.size(); i++) {
                 if(app->play_order[i] == current_real_idx) {
@@ -271,9 +272,23 @@ void PlaylistManager::toggleShuffle() {
             }
         }
     } else {
-        size_t current_real_idx = app->play_order[app->current_track_idx];
-        std::iota(app->play_order.begin(), app->play_order.end(), 0);
-        app->current_track_idx = current_real_idx;
+        // Turning OFF Shuffle
+        
+        // GUARD: Ensure we actually have a valid track selected
+        if (app->current_track_idx != -1 && app->current_track_idx < (int)app->play_order.size()) {
+            // Save the Real ID of song playing
+            size_t current_real_idx = app->play_order[app->current_track_idx];
+            
+            // Reset order
+            std::iota(app->play_order.begin(), app->play_order.end(), 0);
+            
+            // Set index to Real ID (since order is now 0,1,2...)
+            app->current_track_idx = current_real_idx;
+        } else {
+            // Nothing playing, just reset order
+            std::iota(app->play_order.begin(), app->play_order.end(), 0);
+            // current_track_idx remains -1
+        }
     }
 }
 

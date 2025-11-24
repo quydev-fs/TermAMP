@@ -17,8 +17,7 @@ public:
     void pause();
     void stop();
     
-    // --- NEW CONTROLS ---
-    void setVolume(double volume); // 0.0 to 1.0
+    void setVolume(double volume);
     void seek(double seconds);
     double getPosition();
     double getDuration();
@@ -32,6 +31,9 @@ private:
     
     EOSCallback onEOS = nullptr;
     void* eosData = nullptr;
+    
+    // Internal helper to extract tags
+    void handleTags(GstTagList* tags);
 };
 
 #endif
