@@ -12,10 +12,22 @@
 const int FULL_WIDTH = 320;
 const int FULL_HEIGHT_INIT = 340; 
 const int VISUALIZER_FULL_HEIGHT = 40; 
-const int MINI_HEIGHT_REPURPOSED = 180; // Height for controls + big visualizer
+const int MINI_HEIGHT_REPURPOSED = 180; 
 
 UI::UI(int argc, char** argv) {
     gtk_init(&argc, &argv);
+}
+
+UI::~UI() {
+    // Cleanup refs we explicitly took
+    if (playlistBox) g_object_unref(playlistBox);
+    if (drawingArea) g_object_unref(drawingArea);
+    
+    if (playlistMgr) delete playlistMgr;
+    if (visualizer) delete visualizer;
+    if (player) delete player;
+    
+    // FIX: Removed "if (logoImg)..." because GTK manages icons differently
 }
 
 // --- HELPERS ---
@@ -35,70 +47,71 @@ void UI::loadLogo() {
     gtk_window_set_icon_from_file(GTK_WINDOW(window), logoPath.c_str(), NULL);
 }
 
-// --- FIXED: MODE LOGIC (Safe Re-parenting) ---
+// --- FIXED: MODE LOGIC ---
 void UI::toggleMiniMode(bool force_resize) {
     is_mini_mode = !is_mini_mode;
 
-    // 1. Locate the Scrolled Window (Playlist Container)
-    // Since playlistBox might be removed, we find the ScrolledWindow relative to the main layout
-    // It is always the last child of the mainBox.
-    GtkWidget* mainBox = gtk_widget_get_parent(visualizerContainerBox);
-    GList* children = gtk_container_get_children(GTK_CONTAINER(mainBox));
-    GtkWidget* scrolled = GTK_WIDGET(g_list_last(children)->data);
-    g_list_free(children);
+    // Get the playlist container
+    GtkWidget* scrolled = gtk_widget_get_parent(playlistBox);
+    
+    // If we are already in mini mode, the playlistBox is detached, 
+    // so we must find the container via the drawingArea (which is currently inside it)
+    if (!scrolled) {
+        scrolled = gtk_widget_get_parent(drawingArea);
+    }
 
     if (is_mini_mode) {
-        // --- SWITCHING TO MINI MODE ---
+        // --- ENTERING MINI MODE ---
 
-        // A. Move Drawing Area: Box -> Scrolled Window
-        g_object_ref(drawingArea); // Protect from destruction
-        gtk_container_remove(GTK_CONTAINER(visualizerContainerBox), drawingArea); // Remove from top
+        // 1. Remove Visualizer from Top Box
+        g_object_ref(drawingArea); // Protect
+        gtk_container_remove(GTK_CONTAINER(visualizerContainerBox), drawingArea);
+        gtk_widget_hide(visualizerContainerBox); 
+
+        // 2. Remove Playlist from Scrolled Window
+        g_object_ref(playlistBox); // Protect
+        gtk_container_remove(GTK_CONTAINER(scrolled), playlistBox);
         
-        // B. Swap Playlist out
-        g_object_ref(playlistBox); // Protect from destruction
-        gtk_container_remove(GTK_CONTAINER(scrolled), playlistBox); // Remove list
-        
-        // C. Put Drawing Area into Scrolled Window
+        // 3. Put Visualizer into Scrolled Window
         gtk_container_add(GTK_CONTAINER(scrolled), drawingArea);
-        
-        // Resize Visualizer to fill the new space
         gtk_widget_set_size_request(drawingArea, FULL_WIDTH, 120); 
-        
-        // D. Resize Window
+        gtk_widget_show(drawingArea);
+
+        // 4. Resize Window
         gtk_window_set_default_size(GTK_WINDOW(window), FULL_WIDTH, MINI_HEIGHT_REPURPOSED);
         gtk_window_resize(GTK_WINDOW(window), FULL_WIDTH, MINI_HEIGHT_REPURPOSED);
         
         gtk_button_set_label(GTK_BUTTON(btnMiniMode), "F");
         
-        // Release our temporary references (container now owns them)
         g_object_unref(drawingArea);
         g_object_unref(playlistBox);
 
     } else {
-        // --- SWITCHING TO FULL MODE ---
+        // --- ENTERING FULL MODE ---
 
-        // A. Move Drawing Area: Scrolled Window -> Box
-        g_object_ref(drawingArea); 
+        // 1. Remove Visualizer from Scrolled Window
+        g_object_ref(drawingArea);
         gtk_container_remove(GTK_CONTAINER(scrolled), drawingArea);
         
-        // B. Put Playlist back
+        // 2. Put Playlist Back
         g_object_ref(playlistBox);
         gtk_container_add(GTK_CONTAINER(scrolled), playlistBox);
+        gtk_widget_show(playlistBox);
         
-        // C. Put Drawing Area back to top
+        // 3. Put Visualizer Back Top
         gtk_box_pack_start(GTK_BOX(visualizerContainerBox), drawingArea, FALSE, FALSE, 0);
-        gtk_box_reorder_child(GTK_BOX(visualizerContainerBox), drawingArea, 0); // Ensure it's at the top
+        gtk_box_reorder_child(GTK_BOX(visualizerContainerBox), drawingArea, 0);
         
-        // Restore Size
         gtk_widget_set_size_request(drawingArea, -1, VISUALIZER_FULL_HEIGHT);
-        
-        // D. Resize Window
+        gtk_widget_show(visualizerContainerBox);
+        gtk_widget_show(drawingArea);
+
+        // 4. Restore Window
         gtk_window_set_default_size(GTK_WINDOW(window), FULL_WIDTH, FULL_HEIGHT_INIT);
         gtk_window_resize(GTK_WINDOW(window), FULL_WIDTH, FULL_HEIGHT_INIT);
         
         gtk_button_set_label(GTK_BUTTON(btnMiniMode), "M");
 
-        // Release refs
         g_object_unref(drawingArea);
         g_object_unref(playlistBox);
     }
@@ -169,6 +182,7 @@ void UI::onSeekChanged(GtkRange* range, gpointer data) {
 
 gboolean UI::onUpdateTick(gpointer data) {
     UI* ui = (UI*)data;
+    // Queue draw for the drawing area (works in both locations)
     if (ui->player && ui->appState.playing) {
         gtk_widget_queue_draw(ui->drawingArea);
     }
@@ -227,7 +241,7 @@ void UI::initCSS() {
         ".tm-window list row:selected { background-color: #004400; }"
         ".tm-window scale trough { min-height: 4px; background-color: #444; border-radius: 2px; }"
         ".tm-window scale highlight { background-color: " WINAMP_FG_COLOR "; border-radius: 2px; }"
-        ".tm-window scale slider { min-width: 12px; min-height: 12px; background-color: #silver; border-radius: 50%; }";
+        ".tm-window scale slider { min-width: 12px; min-height: 12px; background-color: #c0c0c0; border-radius: 50%; }";
         
     gtk_css_provider_load_from_data(provider, css, -1, NULL);
     gtk_style_context_add_provider_for_screen(gdk_screen_get_default(), GTK_STYLE_PROVIDER(provider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
@@ -257,6 +271,7 @@ void UI::buildWidgets() {
     gtk_box_pack_start(GTK_BOX(mainBox), visualizerContainerBox, FALSE, FALSE, 0);
 
     drawingArea = gtk_drawing_area_new();
+    g_object_ref(drawingArea); // IMPORTANT: We own this ref now
     gtk_widget_set_size_request(drawingArea, -1, VISUALIZER_FULL_HEIGHT); 
     gtk_box_pack_start(GTK_BOX(visualizerContainerBox), drawingArea, FALSE, FALSE, 0);
 
@@ -303,6 +318,7 @@ void UI::buildWidgets() {
     gtk_box_pack_start(GTK_BOX(controlsBox), btnPause, TRUE, TRUE, 0);
     gtk_box_pack_start(GTK_BOX(controlsBox), btnStop, TRUE, TRUE, 0);
     gtk_box_pack_start(GTK_BOX(controlsBox), btnNext, TRUE, TRUE, 0);
+    
     gtk_box_pack_start(GTK_BOX(controlsBox), btnShuffle, TRUE, TRUE, 0);
     gtk_box_pack_start(GTK_BOX(controlsBox), btnRepeat, TRUE, TRUE, 0);
     gtk_box_pack_start(GTK_BOX(controlsBox), btnMiniMode, TRUE, TRUE, 0);
@@ -316,6 +332,7 @@ void UI::buildWidgets() {
     gtk_widget_set_vexpand(scrolled, TRUE); 
     gtk_scrolled_window_set_min_content_height(GTK_SCROLLED_WINDOW(scrolled), 150); 
     playlistBox = gtk_list_box_new();
+    g_object_ref(playlistBox); // IMPORTANT: We own this ref now
     gtk_container_add(GTK_CONTAINER(scrolled), playlistBox);
     gtk_box_pack_start(GTK_BOX(mainBox), scrolled, TRUE, TRUE, 0);
 
@@ -348,6 +365,5 @@ int UI::run() {
     g_timeout_add(100, onUpdateTick, this);
     gtk_widget_show_all(window);
     gtk_main();
-    delete playlistMgr; delete visualizer; delete player;
     return 0;
 }

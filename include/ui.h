@@ -9,6 +9,7 @@
 class UI {
 public:
     UI(int argc, char** argv);
+    ~UI(); // <--- FIX: Added Destructor Declaration
     int run();
 
 private:
@@ -20,7 +21,7 @@ private:
     void toggleMiniMode(bool force_resize = false); 
     static void onMiniModeClicked(GtkButton* btn, gpointer data);
 
-    // --- Signal Handlers (ALL DECLARED HERE) ---
+    // --- Signal Handlers ---
     static void onPlayClicked(GtkButton* btn, gpointer data);
     static void onPauseClicked(GtkButton* btn, gpointer data);
     static void onStopClicked(GtkButton* btn, gpointer data);
@@ -31,13 +32,11 @@ private:
     static void onShuffleClicked(GtkButton* btn, gpointer data);
     static void onRepeatClicked(GtkButton* btn, gpointer data);
     
-    // --- Slider Signals ---
     static void onVolumeChanged(GtkRange* range, gpointer data);
     static gboolean onSeekPress(GtkWidget* widget, GdkEvent* event, gpointer data);
     static gboolean onSeekRelease(GtkWidget* widget, GdkEvent* event, gpointer data);
     static void onSeekChanged(GtkRange* range, gpointer data);
     
-    // --- Update Loops ---
     static gboolean onUpdateTick(gpointer data);
     static gboolean onKeyPress(GtkWidget* widget, GdkEventKey* event, gpointer data);
 
@@ -58,7 +57,6 @@ private:
     GtkWidget* btnRepeat;
     GtkWidget* btnMiniMode;
     
-    // Containers
     GtkWidget* visualizerContainerBox;
 
     // State
