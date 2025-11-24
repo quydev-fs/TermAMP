@@ -1,0 +1,68 @@
+/* assets/style.css */
+
+.tm-window { 
+    background-color: #282828; 
+    font-size: 12px; 
+}
+
+.tm-window label { 
+    color: #00E200; 
+    font-family: 'Monospace'; 
+    font-weight: bold; 
+}
+
+/* Button Styling with 3D Bevel Effect */
+.tm-window button { 
+    background-image: none; 
+    background-color: #454545; 
+    color: #cccccc; 
+    border: 2px solid; 
+    border-color: #606060 #202020 #202020 #606060; /* Raised 3D Bevel */
+    padding: 1px 5px; 
+    min-height: 20px; 
+    margin: 1px; 
+    border-radius: 0px; 
+}
+
+/* Click Effect (Inset) */
+.tm-window button:active { 
+    background-color: #353535; 
+    border-color: #202020 #606060 #606060 #202020; /* Inverted Bevel */
+    color: white; 
+}
+
+/* Active Mode (Shuffle/Repeat ON) */
+.tm-window button.active-mode { 
+    color: #00E200; 
+    font-weight: bold; 
+    background-color: #383838; 
+}
+
+.tm-window list { 
+    background-color: #000000; 
+    color: #00E200; 
+    font-size: 11px; 
+}
+
+.tm-window list row:selected { 
+    background-color: #004400; 
+}
+
+/* Slider Styling */
+.tm-window scale trough { 
+    min-height: 4px; 
+    background-color: #444; 
+    border-radius: 2px; 
+}
+
+.tm-window scale highlight { 
+    background-color: #00E200; 
+    border-radius: 2px; 
+}
+
+.tm-window scale slider { 
+    min-width: 12px; 
+    min-height: 12px; 
+    background-color: #c0c0c0; 
+    border-radius: 50%; 
+}

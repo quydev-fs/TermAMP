@@ -19,9 +19,9 @@ all: directories compile-all link
 compile-all: $(OBJS)
 
 link: $(OBJS)
-	@echo "[$(TOTAL)/$(TOTAL)] Linking..."
+	@echo "[CHORE] Linking..."
 	@$(CXX) $(OBJS) -o $(TARGET) $(LDFLAGS)
-
+	@echo "Done compiling!"
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 	@BUILT=$$(ls $(OBJ_DIR)/*.o 2>/dev/null | wc -l); \
 	CURRENT=$$(($$BUILT + 1)); \
