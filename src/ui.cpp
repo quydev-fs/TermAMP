@@ -96,7 +96,7 @@ void UI::toggleMiniMode(bool force_resize) {
         gtk_widget_show(drawingArea);
         gtk_window_set_default_size(GTK_WINDOW(window), FULL_WIDTH, FULL_HEIGHT_INIT);
         gtk_window_resize(GTK_WINDOW(window), FULL_WIDTH, FULL_HEIGHT_INIT);
-        gtk_button_set_label(GTK_BUTTON(btnMiniMode), "MINI");
+        gtk_button_set_label(GTK_BUTTON(btnMiniMode), "MIN");
         g_object_unref(drawingArea);
         g_object_unref(playlistBox);
     }
