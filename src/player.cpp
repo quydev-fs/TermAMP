@@ -1,8 +1,8 @@
 #include "player.h"
 #include <iostream>
-#include <filesystem> // C++17 feature for filename extraction
+#include <filesystem>
 
-Player::Player(AppState* state) : app(state) {
+Player::Player(AppState* state) : app(state), last_play_time(0) {
     gst_init(NULL, NULL);
     pipeline = gst_element_factory_make("playbin", "player");
     
@@ -30,21 +30,15 @@ void Player::setEOSCallback(EOSCallback cb, void* data) {
 
 void Player::load(const std::string& path) {
     stop(); 
-    
-    // 1. Set Fallback Name (Filename) immediately
-    // This ensures we don't show the OLD song title while loading the NEW one
     std::string filename = std::filesystem::path(path).filename().string();
-    app->current_track_name = filename; // Default to filename
+    app->current_track_name = filename; 
     
-    // 2. Load GStreamer URI
     GError *error = NULL;
     gchar *uri = gst_filename_to_uri(path.c_str(), &error);
     
     if (error) {
         if (path.find("file://") == 0 || path.find("http://") == 0) {
              g_object_set(G_OBJECT(pipeline), "uri", path.c_str(), NULL);
-        } else {
-             std::cerr << "URI Error: " << error->message << std::endl;
         }
         g_error_free(error);
     } else {
@@ -55,6 +49,10 @@ void Player::load(const std::string& path) {
 
 void Player::play() {
     if (!pipeline) return;
+    
+    // FIX: Record time BEFORE changing state
+    last_play_time = g_get_monotonic_time();
+    
     gst_element_set_state(pipeline, GST_STATE_PLAYING);
     app->playing = true;
     app->paused = false;
@@ -72,7 +70,7 @@ void Player::stop() {
     gst_element_set_state(pipeline, GST_STATE_NULL);
     app->playing = false;
     app->paused = false;
-    app->current_track_name = "Ready"; // Reset on full stop
+    app->current_track_name = "Ready"; 
 }
 
 void Player::setVolume(double volume) {
@@ -105,26 +103,17 @@ double Player::getDuration() {
     return 0.0;
 }
 
-// --- NEW: Tag Handler Helper ---
 void Player::handleTags(GstTagList* tags) {
     gchar *artist = NULL;
     gchar *title = NULL;
-
-    // Try to get Artist and Title
     gst_tag_list_get_string(tags, GST_TAG_ARTIST, &artist);
     gst_tag_list_get_string(tags, GST_TAG_TITLE, &title);
 
     if (title) {
         std::string meta;
-        if (artist) {
-            meta = std::string(artist) + " - " + std::string(title);
-        } else {
-            meta = std::string(title);
-        }
-        
-        // Update App State
+        if (artist) meta = std::string(artist) + " - " + std::string(title);
+        else meta = std::string(title);
         app->current_track_name = meta;
-        
         g_free(title);
         if (artist) g_free(artist);
     }
@@ -133,14 +122,22 @@ void Player::handleTags(GstTagList* tags) {
 gboolean Player::busCallback(GstBus* bus, GstMessage* msg, gpointer data) {
     Player* player = (Player*)data;
     switch (GST_MESSAGE_TYPE(msg)) {
-        case GST_MESSAGE_EOS:
-            if (player->onEOS) player->onEOS(player->eosData);
-            else player->stop();
+        case GST_MESSAGE_EOS: {
+            // FIX: Check timestamp. If < 500ms since resume, it's a glitch.
+            guint64 now = g_get_monotonic_time();
+            if (now < player->last_play_time + 500000) {
+                break; // Ignore this EOS
+            }
+
+            if (player->app->playing) {
+                if (player->onEOS) player->onEOS(player->eosData);
+                else player->stop();
+            }
             break;
+        }
         case GST_MESSAGE_ERROR:
             player->stop();
             break;
-        // --- NEW: Handle Metadata Tags ---
         case GST_MESSAGE_TAG: {
             GstTagList *tags = NULL;
             gst_message_parse_tag(msg, &tags);

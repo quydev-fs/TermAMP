@@ -32,8 +32,10 @@ private:
     EOSCallback onEOS = nullptr;
     void* eosData = nullptr;
     
-    // Internal helper to extract tags
     void handleTags(GstTagList* tags);
+    
+    // FIX: Variable to ignore EOS signals immediately after resuming
+    guint64 last_play_time = 0; 
 };
 
 #endif
