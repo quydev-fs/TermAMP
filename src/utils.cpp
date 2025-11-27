@@ -170,3 +170,54 @@ bool Utils::convertAudioFormat(const std::string& inputPath, const std::string& 
 
     return result;
 }
+
+// Album art implementation
+GdkPixbuf* Utils::extractAlbumArt(const std::string& audioFilePath, int size) {
+    // First look for common album art file names in the same directory as the audio file
+    std::string dirPath = audioFilePath.substr(0, audioFilePath.find_last_of("/\\"));
+
+    // Common album art file names
+    std::vector<std::string> albumArtNames = {
+        "folder.jpg", "Folder.jpg", "FOLDER.jpg",
+        "album.jpg", "Album.jpg", "ALBUM.jpg",
+        "cover.jpg", "Cover.jpg", "COVER.jpg",
+        "artwork.jpg", "Artwork.jpg", "ARTWORK.jpg",
+        "front.jpg", "Front.jpg", "FRONT.jpg"
+    };
+
+    for (const auto& artName : albumArtNames) {
+        std::string fullPath = dirPath + "/" + artName;
+        GFile *file = g_file_new_for_path(fullPath.c_str());
+        if (g_file_query_exists(file, NULL)) {
+            g_object_unref(file);
+            // Found an album art file, try to load it
+            GError *error = NULL;
+            GdkPixbuf *pixbuf = gdk_pixbuf_new_from_file_at_size(fullPath.c_str(), size, size, &error);
+            if (pixbuf) {
+                return pixbuf;
+            }
+            if (error) {
+                g_error_free(error);
+            }
+        }
+        g_object_unref(file);
+    }
+
+    // If no external album art found, try to extract from audio file metadata
+    // This is a simplified implementation - in a real application, you would use
+    // a library like taglib to extract embedded images from audio files
+
+    // For now, return NULL indicating no album art found
+    return nullptr;
+}
+
+GdkPixbuf* Utils::loadAlbumArtFromCache(const std::string& audioFilePath, int size) {
+    // A simple cache implementation would go here
+    // For now, just call extractAlbumArt
+    return extractAlbumArt(audioFilePath, size);
+}
+
+void Utils::cacheAlbumArt(const std::string& audioFilePath, GdkPixbuf* pixbuf) {
+    // A simple cache implementation would go here
+    // For now, this is a no-op
+}

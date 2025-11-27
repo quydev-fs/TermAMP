@@ -58,6 +58,9 @@ private:
     static gboolean onUpdateTick(gpointer data);
     static gboolean onKeyPress(GtkWidget* widget, GdkEventKey* event, gpointer data);
 
+    // Helper functions
+    void updateAlbumArt();
+
     // --- Members ---
     AppState appState;
     Player* player;
@@ -92,6 +95,9 @@ private:
     GtkWidget* convertBtn;
     GtkWidget* convertFormatCombo;
     GtkWidget* convertProgress;
+
+    // Album art widgets
+    GtkWidget* albumArtImage;
 
     bool isSeeking = false;
     bool is_mini_mode = false;

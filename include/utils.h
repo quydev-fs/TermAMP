@@ -28,6 +28,11 @@ public:
     typedef void (*ConversionProgressCallback)(double progress, void* userData);
     static void setProgressCallback(ConversionProgressCallback callback, void* userData);
 
+    // Album art functions
+    static GdkPixbuf* extractAlbumArt(const std::string& audioFilePath, int size = 100);
+    static GdkPixbuf* loadAlbumArtFromCache(const std::string& audioFilePath, int size = 100);
+    static void cacheAlbumArt(const std::string& audioFilePath, GdkPixbuf* pixbuf);
+
 private:
     static ConversionProgressCallback progressCallback;
     static void* callbackUserData;

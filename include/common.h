@@ -48,6 +48,14 @@ struct AppState {
     bool conversion_in_progress = false;
     std::string last_conversion_output_path;
     double conversion_progress = 0.0;  // 0.0 to 1.0
+
+    // NEW: Album art state
+    std::string current_album_art_path;
+    GdkPixbuf* current_album_art = nullptr;
+
+    // Album art update callback
+    void (*onAlbumArtChanged)(void* userData) = nullptr;
+    void* albumArtCallbackUserData = nullptr;
 };
 
 #endif

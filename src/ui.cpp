@@ -183,6 +183,38 @@ void UI::onSeekChanged(GtkRange* range, gpointer data) {
     if (!ui->isSeeking) ui->player->seek(gtk_range_get_value(range));
 }
 
+// Helper function to update album art display
+void UI::updateAlbumArt() {
+    // First, free the previous album art if it exists
+    if (appState.current_album_art) {
+        g_object_unref(appState.current_album_art);
+        appState.current_album_art = nullptr;
+    }
+
+    // Try to extract album art for the current track
+    if (!appState.playlist.empty() && appState.current_track_idx >= 0 &&
+        appState.current_track_idx < (int)appState.play_order.size()) {
+
+        size_t real_idx = appState.play_order[appState.current_track_idx];
+        if (real_idx < appState.playlist.size()) {
+            std::string track_path = appState.playlist[real_idx];
+
+            // Try to extract album art from the audio file or its directory
+            appState.current_album_art = Utils::loadAlbumArtFromCache(track_path, 150);
+
+            if (appState.current_album_art) {
+                // Update the album art image widget
+                gtk_image_set_from_pixbuf(GTK_IMAGE(albumArtImage), appState.current_album_art);
+                gtk_widget_show(albumArtImage); // Make sure it's visible
+            } else {
+                // If no album art found, hide the image widget or show a default
+                gtk_image_set_from_icon_name(GTK_IMAGE(albumArtImage), "audio-x-generic", GTK_ICON_SIZE_DIALOG);
+                gtk_widget_hide(albumArtImage); // Hide if no art
+            }
+        }
+    }
+}
+
 // --- EQUALIZER HANDLERS ---
 void UI::onEqToggled(GtkToggleButton* toggle, gpointer data) {
     UI* ui = (UI*)data;
@@ -479,16 +511,23 @@ void UI::buildWidgets() {
     // --- END MENU BAR ---
       
     visualizerContainerBox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);      
-    gtk_box_pack_start(GTK_BOX(mainBox), visualizerContainerBox, FALSE, FALSE, 0);      
-      
-    drawingArea = gtk_drawing_area_new();      
-    g_object_ref(drawingArea);       
-    gtk_widget_set_size_request(drawingArea, -1, VISUALIZER_FULL_HEIGHT);       
-    gtk_box_pack_start(GTK_BOX(visualizerContainerBox), drawingArea, FALSE, FALSE, 0);      
-      
-    lblInfo = gtk_label_new("Ready");      
-    gtk_label_set_ellipsize(GTK_LABEL(lblInfo), PANGO_ELLIPSIZE_END);      
-    gtk_box_pack_start(GTK_BOX(mainBox), lblInfo, FALSE, FALSE, 2);      
+    gtk_box_pack_start(GTK_BOX(mainBox), visualizerContainerBox, FALSE, FALSE, 0);
+
+    drawingArea = gtk_drawing_area_new();
+    g_object_ref(drawingArea);
+    gtk_widget_set_size_request(drawingArea, -1, VISUALIZER_FULL_HEIGHT);
+    gtk_box_pack_start(GTK_BOX(visualizerContainerBox), drawingArea, FALSE, FALSE, 0);
+
+    // Album Art Display
+    albumArtImage = gtk_image_new();
+    gtk_widget_set_size_request(albumArtImage, 150, 150);
+    gtk_widget_set_halign(albumArtImage, GTK_ALIGN_CENTER);
+    gtk_box_pack_start(GTK_BOX(mainBox), albumArtImage, FALSE, FALSE, 2);
+    gtk_widget_hide(albumArtImage); // Initially hidden until album art is found
+
+    lblInfo = gtk_label_new("Ready");
+    gtk_label_set_ellipsize(GTK_LABEL(lblInfo), PANGO_ELLIPSIZE_END);
+    gtk_box_pack_start(GTK_BOX(mainBox), lblInfo, FALSE, FALSE, 2);
       
     seekScale = gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL, 0, 100, 1);      
     gtk_scale_set_draw_value(GTK_SCALE(seekScale), FALSE);      
@@ -664,6 +703,19 @@ void UI::buildWidgets() {
 int UI::run() {
     player = new Player(&appState);
     visualizer = new Visualizer(&appState);
+
+    // Set up album art callback
+    appState.onAlbumArtChanged = [](void* userData) {
+        UI* ui = (UI*)userData;
+        // Update album art from main thread
+        g_idle_add([](gpointer data) -> gboolean {
+            UI* ui = (UI*)data;
+            ui->updateAlbumArt();
+            return G_SOURCE_REMOVE;
+        }, ui);
+    };
+    appState.albumArtCallbackUserData = this;
+
     buildWidgets();
     playlistMgr = new PlaylistManager(&appState, player, playlistBox);
     player->setEOSCallback([](void* data){ ((PlaylistManager*)data)->autoAdvance(); }, playlistMgr);
