@@ -248,6 +248,27 @@ void UI::onEqResetClicked(GtkButton* btn, gpointer data) {
         g_signal_handlers_unblock_by_func(ui->eqSliders[i], (void*)onEqBandChanged, ui);
     }
 }
+
+// --- CROSSFADING HANDLERS ---
+void UI::onCrossfadeToggled(GtkToggleButton* toggle, gpointer data) {
+    UI* ui = (UI*)data;
+    bool enabled = gtk_toggle_button_get_active(toggle);
+    ui->appState.crossfading_enabled = enabled;
+
+    // Update the sensitivity of the duration slider based on toggle state
+    gtk_widget_set_sensitive(ui->crossfadeDurationScale, enabled);
+}
+
+void UI::onCrossfadeDurationChanged(GtkRange* range, gpointer data) {
+    UI* ui = (UI*)data;
+    double value = gtk_range_get_value(range);
+    ui->appState.crossfade_duration = value;
+
+    // Update the label to show current value
+    char text[20];
+    sprintf(text, "%.1f s", value);
+    gtk_label_set_text(GTK_LABEL(ui->crossfadeDurationLabel), text);
+}
 gboolean UI::onUpdateTick(gpointer data) {      
     UI* ui = (UI*)data;      
     if (!ui->player) return TRUE;      
@@ -438,6 +459,24 @@ void UI::buildWidgets() {
 
     gtk_box_pack_start(GTK_BOX(mainBox), eqBox, FALSE, FALSE, 2);
 
+    // Crossfading Controls
+    GtkWidget* crossfadeBox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 2);
+    crossfadeToggle = gtk_toggle_button_new_with_label("X-Fade");
+    crossfadeDurationScale = gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL, 1.0, 10.0, 0.1);
+    gtk_scale_set_draw_value(GTK_SCALE(crossfadeDurationScale), FALSE); // We'll use our own label
+    gtk_range_set_value(GTK_RANGE(crossfadeDurationScale), appState.crossfade_duration);
+    crossfadeDurationLabel = gtk_label_new(NULL);
+    char initialText[20];
+    sprintf(initialText, "%.1f s", appState.crossfade_duration);
+    gtk_label_set_text(GTK_LABEL(crossfadeDurationLabel), initialText);
+
+    gtk_box_pack_start(GTK_BOX(crossfadeBox), crossfadeToggle, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(crossfadeBox), crossfadeDurationScale, TRUE, TRUE, 0);
+    gtk_box_pack_start(GTK_BOX(crossfadeBox), crossfadeDurationLabel, FALSE, FALSE, 0);
+
+    gtk_box_pack_start(GTK_BOX(mainBox), crossfadeBox, FALSE, FALSE, 2);
+    gtk_widget_set_sensitive(crossfadeDurationScale, false); // Initially disabled
+
     GtkWidget* controlsBox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
     GtkWidget* btnPrev = gtk_button_new_with_label("<");
     GtkWidget* btnPlay = gtk_button_new_with_label("|>");
@@ -492,6 +531,10 @@ void UI::buildWidgets() {
     for (auto slider : eqSliders) {
         g_signal_connect(slider, "value-changed", G_CALLBACK(onEqBandChanged), this);
     }
+
+    // Crossfading Signal Connections
+    g_signal_connect(crossfadeToggle, "toggled", G_CALLBACK(onCrossfadeToggled), this);
+    g_signal_connect(crossfadeDurationScale, "value-changed", G_CALLBACK(onCrossfadeDurationChanged), this);
 }
       
 int UI::run() {
@@ -514,6 +557,10 @@ int UI::run() {
         std::vector<double> flatBands(10, 0.0);
         player->setEqualizerBands(flatBands);
     }
+
+    // Initialize crossfading toggle state
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(crossfadeToggle), appState.crossfading_enabled);
+    gtk_widget_set_sensitive(crossfadeDurationScale, appState.crossfading_enabled);
 
     gtk_main();
     return 0;

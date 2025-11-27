@@ -2,7 +2,7 @@
 #include <iostream>
 #include <filesystem>
 
-Player::Player(AppState* state) : app(state), last_play_time(0), equalizer(nullptr) {
+Player::Player(AppState* state) : app(state), last_play_time(0), equalizer(nullptr), next_pipeline(nullptr), crossfade_timeout_id(0) {
     gst_init(NULL, NULL);
     pipeline = gst_element_factory_make("playbin", "player");
 
@@ -28,6 +28,15 @@ Player::~Player() {
     if (equalizer) {
         gst_element_set_state(equalizer, GST_STATE_NULL);
         gst_object_unref(equalizer);
+    }
+
+    if (next_pipeline) {
+        gst_element_set_state(next_pipeline, GST_STATE_NULL);
+        gst_object_unref(next_pipeline);
+    }
+
+    if (crossfade_timeout_id > 0) {
+        g_source_remove(crossfade_timeout_id);
     }
 }
 
@@ -203,6 +212,107 @@ void Player::enableEqualizer(bool enabled) {
 
 bool Player::isEqualizerEnabled() const {
     return app->eq_enabled;
+}
+
+// Crossfading implementation
+gboolean Player::updateCrossfade() {
+    if (!app->crossfading_enabled) {
+        stopCrossfade();
+        return FALSE; // Stop the timer
+    }
+
+    double currentPos = getPosition();
+    double duration = getDuration();
+    double remaining = duration - currentPos;
+
+    if (remaining <= app->crossfade_duration) {
+        // Start the next track if it's not already playing
+        if (next_pipeline && getState() == GST_STATE_PLAYING) {
+            gst_element_set_state(next_pipeline, GST_STATE_PLAYING);
+
+            // Fade out current track
+            double fadeOutVolume = (remaining / app->crossfade_duration) * app->volume;
+            setVolume(fadeOutVolume);
+
+            // Fade in next track
+            double fadeInVolume = ((app->crossfade_duration - remaining) / app->crossfade_duration) * app->volume;
+            g_object_set(G_OBJECT(next_pipeline), "volume", fadeInVolume, NULL);
+        }
+    }
+
+    if (remaining <= 0) {
+        // Switch to the next pipeline completely
+        gst_element_set_state(pipeline, GST_STATE_NULL);
+        gst_object_unref(pipeline);
+        pipeline = next_pipeline;
+        next_pipeline = nullptr;
+        app->is_crossfading = false;
+        return FALSE; // Stop the timer
+    }
+
+    return TRUE; // Continue the timer
+}
+
+gboolean Player::crossfadeTimer(gpointer data) {
+    Player* player = (Player*)data;
+    return player->updateCrossfade();
+}
+
+void Player::startCrossfade(const std::string& nextUri) {
+    if (!app->crossfading_enabled || nextUri.empty()) return;
+
+    // Create the next pipeline
+    next_pipeline = gst_element_factory_make("playbin", "next_player");
+    if (!next_pipeline) {
+        std::cerr << "Failed to create next pipeline for crossfading." << std::endl;
+        return;
+    }
+
+    // Set URI for the next track
+    GError *error = NULL;
+    gchar *uri = gst_filename_to_uri(nextUri.c_str(), &error);
+    if (error) {
+        if (nextUri.find("file://") == 0 || nextUri.find("http://") == 0) {
+             g_object_set(G_OBJECT(next_pipeline), "uri", nextUri.c_str(), NULL);
+        }
+        g_error_free(error);
+    } else {
+        g_object_set(G_OBJECT(next_pipeline), "uri", uri, NULL);
+        g_free(uri);
+    }
+
+    // Set volume to 0 initially for fade-in effect
+    g_object_set(G_OBJECT(next_pipeline), "volume", 0.0, NULL);
+
+    // Set up the equalizer for the next pipeline if needed
+    setupEqualizer();
+
+    app->is_crossfading = true;
+
+    // Start the crossfade timer
+    if (crossfade_timeout_id > 0) {
+        g_source_remove(crossfade_timeout_id);
+    }
+    crossfade_timeout_id = g_timeout_add(50, crossfadeTimer, this); // 50ms interval for smooth fade
+}
+
+void Player::stopCrossfade() {
+    if (crossfade_timeout_id > 0) {
+        g_source_remove(crossfade_timeout_id);
+        crossfade_timeout_id = 0;
+    }
+
+    if (next_pipeline) {
+        gst_element_set_state(next_pipeline, GST_STATE_NULL);
+        gst_object_unref(next_pipeline);
+        next_pipeline = nullptr;
+    }
+
+    app->is_crossfading = false;
+}
+
+bool Player::isCrossfading() const {
+    return app->is_crossfading;
 }
 
 gboolean Player::busCallback(GstBus* bus, GstMessage* msg, gpointer data) {

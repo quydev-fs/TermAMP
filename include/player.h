@@ -32,6 +32,12 @@ public:
     void enableEqualizer(bool enabled);
     bool isEqualizerEnabled() const;
 
+    // Crossfading functions
+    void startCrossfade(const std::string& nextUri);
+    void stopCrossfade();
+    bool isCrossfading() const;
+    gboolean updateCrossfade();  // Main crossfade update method that will be called from the timer
+
     void setEOSCallback(EOSCallback cb, void* data);
     static gboolean busCallback(GstBus* bus, GstMessage* msg, gpointer data);
 
@@ -39,6 +45,14 @@ private:
     AppState* app;
     GstElement* pipeline;
     GstElement* equalizer;  // Audio equalizer element
+
+    // For crossfading
+    GstElement* next_pipeline;
+    std::string next_uri;
+    guint crossfade_timeout_id;
+
+    // Static callback for crossfading (needs to be declared here)
+    static gboolean crossfadeTimer(gpointer data);
 
     EOSCallback onEOS = nullptr;
     void* eosData = nullptr;

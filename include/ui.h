@@ -47,6 +47,10 @@ private:
     static void onEqPresetChanged(GtkComboBox* combo, gpointer data);
     static void onEqResetClicked(GtkButton* btn, gpointer data);
 
+    // --- Crossfading Handlers ---
+    static void onCrossfadeToggled(GtkToggleButton* toggle, gpointer data);
+    static void onCrossfadeDurationChanged(GtkRange* range, gpointer data);
+
     static gboolean onUpdateTick(gpointer data);
     static gboolean onKeyPress(GtkWidget* widget, GdkEventKey* event, gpointer data);
 
@@ -74,6 +78,11 @@ private:
     GtkWidget* eqPresetCombo;
     GtkWidget* eqBandsBox;
     std::vector<GtkWidget*> eqSliders;
+
+    // Crossfading widgets
+    GtkWidget* crossfadeToggle;
+    GtkWidget* crossfadeDurationScale;
+    GtkWidget* crossfadeDurationLabel;
 
     bool isSeeking = false;
     bool is_mini_mode = false;

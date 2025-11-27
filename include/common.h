@@ -38,6 +38,11 @@ struct AppState {
     // NEW: Equalizer State
     bool eq_enabled = false;
     std::vector<double> eq_bands;
+
+    // NEW: Crossfading State
+    bool crossfading_enabled = false;
+    double crossfade_duration = 3.0;  // 3 seconds default crossfade
+    bool is_crossfading = false;
 };
 
 #endif

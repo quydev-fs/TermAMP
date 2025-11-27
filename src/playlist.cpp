@@ -195,6 +195,7 @@ void PlaylistManager::autoAdvance() {
         }
         return;
     }
+
     int next = app->current_track_idx + 1;
     if (next >= (int)app->play_order.size()) {
         if (app->repeatMode == REP_ALL) {
@@ -206,10 +207,19 @@ void PlaylistManager::autoAdvance() {
             return;
         }
     }
-    app->current_track_idx = next;
-    size_t real_idx = app->play_order[app->current_track_idx];
-    player->load(app->playlist[real_idx]);
-    player->play();
+
+    size_t next_real_idx = app->play_order[next];
+    if (app->crossfading_enabled) {
+        // Start crossfade to the next track
+        player->startCrossfade(app->playlist[next_real_idx]);
+        app->current_track_idx = next;
+    } else {
+        // Regular transition without crossfading
+        app->current_track_idx = next;
+        size_t real_idx = app->play_order[app->current_track_idx];
+        player->load(app->playlist[real_idx]);
+        player->play();
+    }
     highlightCurrentTrack();
 }
 
@@ -217,11 +227,20 @@ void PlaylistManager::autoAdvance() {
 void PlaylistManager::playNext() {
     if (app->playlist.empty()) return;
     int next = app->current_track_idx + 1;
-    if (next >= (int)app->play_order.size()) next = 0; 
-    app->current_track_idx = next;
-    size_t real_idx = app->play_order[app->current_track_idx];
-    player->load(app->playlist[real_idx]);
-    player->play();
+    if (next >= (int)app->play_order.size()) next = 0;
+
+    size_t next_real_idx = app->play_order[next];
+    if (app->crossfading_enabled) {
+        // Start crossfade to the next track
+        player->startCrossfade(app->playlist[next_real_idx]);
+        app->current_track_idx = next;
+    } else {
+        // Regular transition without crossfading
+        app->current_track_idx = next;
+        size_t real_idx = app->play_order[app->current_track_idx];
+        player->load(app->playlist[real_idx]);
+        player->play();
+    }
     highlightCurrentTrack();
 }
 
@@ -229,17 +248,26 @@ void PlaylistManager::playPrev() {
     if (app->playlist.empty()) return;
     if (player->getPosition() > 2.0) {
         if(app->current_track_idx >= 0) {
-            player->load(app->playlist[app->play_order[app->current_track_idx]]); 
+            player->load(app->playlist[app->play_order[app->current_track_idx]]);
             player->play();
         }
         return;
     }
     int prev = app->current_track_idx - 1;
-    if (prev < 0) prev = app->play_order.size() - 1; 
-    app->current_track_idx = prev;
-    size_t real_idx = app->play_order[app->current_track_idx];
-    player->load(app->playlist[real_idx]);
-    player->play();
+    if (prev < 0) prev = app->play_order.size() - 1;
+
+    size_t prev_real_idx = app->play_order[prev];
+    if (app->crossfading_enabled) {
+        // Start crossfade to the previous track
+        player->startCrossfade(app->playlist[prev_real_idx]);
+        app->current_track_idx = prev;
+    } else {
+        // Regular transition without crossfading
+        app->current_track_idx = prev;
+        size_t real_idx = app->play_order[app->current_track_idx];
+        player->load(app->playlist[real_idx]);
+        player->play();
+    }
     highlightCurrentTrack();
 }
 
